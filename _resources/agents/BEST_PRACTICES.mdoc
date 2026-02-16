@@ -1,0 +1,338 @@
+# Best Practices: 76 NextWebsite
+
+## 🤖 Multi-Agent Workflow
+Follow the [[_RESOURCES/DATACORE/76 NextWebsite/_resources/agents/RALPH_WIGGUM|Ralph Wiggum Methodology]].
+- **Tasks**: Store in `_resources/agents/tasks/[ID]_[TITLE].md`.
+- **Implementation**: track in `_resources/agents/implementation/implementation_plan.md`.
+
+## 🎨 Styling & Parity
+- **Source of Truth**: Always edit `src/styles/styles.jsx`. Never edit `.generated.jsx` files directly.
+- **Global Resets**: Use the `DebugManager` to inject global resets if browser-specific defaults interfere with
+pixel-perfect parity.
+- **Container Queries**: Use `cqw` and `cqh` units for scaling to ensure the website looks the same regardless of
+whether it's in an Obsidian pane or a full browser tab.
+- **Full-Height Pinning**: For full-page experiences (like games), use `position: absolute; inset: 0` on the root
+container in inception mode to bypass Obsidian's host height constraints.
+- **Premium Impact**: Favor heavy weights (800, 900) for headers and subtle letter-spacing adjustments for a pro look.
+- **Fluid GRID_SIZE**: For canvas-based games, avoid fixed pixel grids. Use window-width ratios for `GRID_SIZE` (e.g.,
+`Math.max(30, Math.min(80, Math.floor(w / 30)))`) to ensure immersion on both mobile and 4K displays.
+- **Robust Viewport Scaling**: (NEW) Components rendered in Datacore sidebars or embedded contexts often find `vw`
+(viewport width) unreliable.
+- **Preference**: Use percentage-based widths (`width: 95%`) and `padding` instead of aggressive `vw` units (`width:
+85vw`).
+- **Clamping**: Always use `clamp()` for font sizes to ensure they degrade gracefully in narrow side panes without
+clipping.
+
+## 🎮 Responsive Game Development
+Building immersive games that work from tiny sidebars to 4K monitors requires specialized patterns:
+
+### 1. Ref-Based Dimension Sync
+Never rely on React state or standard closures inside a `requestAnimationFrame` loop for coordinates.
+- **Pattern**: Maintain a `dimsRef` that is updated on window resize.
+- **Why**: The game loop runs at 60fps and needs the *raw* current boundaries. React state updates are too slow for
+physics/AI pathfinding during a rapid resize.
+
+### 2. Canvas "Mega-Scaling"
+On massive displays (w > 1600px), increase the `GRID_SIZE` further. A 20px snake on a 4K monitor feels like a bug; a
+60px snake feels like a "Power Move."
+
+### 3. Safe Spawning Buffers
+When placing game items (food, enemies), use a margin (e.g., `grid_width - 4`). This prevents items from hiding under
+the browser's rounded corners or mobile safe areas.
+
+### 4. Ultra-Safe UI Guardrails
+On extremely narrow windows (
+< 400px), standard titles often clip. Use: - **`maxWidth: 85vw`** + **`padding: 0 20px`** on the root container. -
+  **Aggressive Clamps**: `fontSize: clamp(18px, 6vw, 120px)`. - **Gutters**: Mandatory horizontal padding ensures
+  the "Character Clipping" failure is physically impossible. ## 🧭 Navigation & Layout Flow - **Sticky vs. Fixed**:
+  Always prefer `position: sticky` for Navbars. - **Why**: Sticky elements naturally take up space in the document flow,
+  pushing content down and preventing "Clipping" under the header. - **Fixed Pitfall**: `position: fixed` overlaps
+  everything, requiring hardcoded `paddingTop` hacks which are brittle across screen sizes. - **Flexbox Chain**: Every
+  parent in the hierarchy must use `display: flex`, `flexDirection: column`, and `minHeight: 0` to ensure `flex: 1`
+  correctly propagates height to child components. - **Box Sizing**: Use `boxSizing: 'border-box' ` on the root
+  container to ensure padding (like for navbars) doesn't calculate into total height and trigger unwanted scrollbars. ##
+  🔄 Build & Sync - **Shim Build**: Always run `npm run shim` after editing any component or style file. - **Intelligent
+  Node.js Mocks**: For components that use Node built-ins (`fs`, `child_process`), `build-shim.js` provides functional
+  web mocks. Avoid manually stubbing these in component code; let the shim handle it to preserve Obsidian functionality.
+  - **Robust Dependency Lifting**: Use `dc.require` for all internal dependencies. The build shim now robustly "lifts"
+  these (including `.js` utilities and un-declared assignments) to top-level ESM imports for the web. - **Generated
+  Files**: Verify that `.generated.jsx` files contain the correct `export` statements and relative imports. - **Website
+  View**: Test changes in the standard browser (`npm run dev`) only after verifying them in Datacore. ## 🛠️ Debugging -
+  **DebugManager**: Use `debugManager.log()` for environment-aware logging. - **Console Versioning**: Check for the 💎
+  (Datacore) or 🌐 (Website) emoji to confirm which environment is logged. - **Evaluation Logs**: Ensure components log
+  their evaluation state to detect loading failures early. ## ⚠️ Common Pitfalls - **Missing Exports**: Ensure the shim
+  build correctly transforms `return { Component }` into `export { Component }`. - **Absolute Paths**: Don't use them in
+  components; use paths relative to `folderPath`. - **Hook Shadows**: Be careful when passing `useState`/`useEffect` as
+  props; avoid naming collisions in sub-components. Standardize on using `dc.useState` etc. - **Overflow Hidden**: Never
+  set `overflow: hidden` on root containers. Use `overflow: auto` or `min-height: min-content` to preserve scrollability
+  across platforms. - **InvalidCharacterError**: This occurs when you try to render an **Object** (React Element) as a
+  **Tag** (e.g., `<Element />`). Ensure your shim detects if the factory returned a function or an element and renders
+it appropriately.
+- **Next.js Root Conflict**: Next.js (Turbopack) can get confused if there is an `app/` directory at the root AND a
+`src/app/` directory. Always favor `src/app/` for the web build and ensure root `app/` is removed to prevent "Ghost
+File" behavior where edits to `src/app/page.jsx` are ignored.
+- **Dependency Versioning**: (IMPORTANT) For stability in this environment, use **Next.js 15.1.6** and **React 19.0.0**.
+Upgrading to 15.2+ may introduce module resolution issues with Keystatic's internal dependency graph. Stay pinned to
+these versions in `package.json`.
+- **NPM Cache Permissions**: If you encounter `EACCES` errors during `npm install` on macOS, use a local cache
+directory: `npm install --cache ./.npm_cache`.
+
+## ⚙️ Background Tasks & Command Execution
+When executing shell commands (like `npm run build`) from a Datacore component (e.g., `ControlPanel.jsx`):
+
+### 1. Robust Shell Execution
+Always use `child_process.spawn` with a **login shell** (`-l`) to ensure the user's full environment (NVM, Node paths,
+etc.) is loaded.
+- **Bad**: `exec('npm run build')` (Often fails with `sh: npm: command not found` or `Exit Code -2`).
+- **Good**: `spawn('/bin/zsh', ['-l', '-c', 'npm run build'], { cwd: absolutePath })`.
+
+### 2. Absolute Path Resolution
+Commands like `spawn` require a system-absolute path for the `cwd` option. Datacore `folderPath` is often relative.
+- **Resolution**: Use `dc.app.vault.adapter.getBasePath()` to resolve the vault root.
+```javascript
+const vaultPath = dc.app.vault.adapter.getBasePath();
+const absolutePath = path.resolve(vaultPath, folderPath);
+```
+
+## 🌉 Hybrid Compatibility (Next.js + Datacore)
+For a component to work in both Datacore (Obsidian) and the Web build, it must follow these rules:
+
+### 1. The "Inception" Prop
+All components MUST check for the `isInception` prop.
+- **`isInception: true`**: Component is embedded inside the WebsiteBuilder.
+- **Action**: Disable "Full-Tab Mode," overlays, or high-z-index sidebars that would conflict with the host application.
+```javascript
+const [isFullTab, setIsFullTab] = useState(!props.isInception);
+```
+
+### 2. Async View Factories
+Always use the `async function View` pattern. This allows the host (`DatacoreShim`) to await dependency loading via
+`dc.require` before rendering the React component.
+```javascript
+async function View({ folderPath, isInception, ...props }) {
+const { STYLES } = await dc.require(folderPath + '/src/styles/styles.jsx');
+return function ViewComponent() { ... };
+}
+```
+
+### 3. ESM Registry Registration
+Components extracted from Markdown MUST be added to the build-time Registry.
+- **Script**: `scripts/build-shim.js` transforms `return { View }` into `export { View }`.
+- **Web Loader**: The web version uses dynamic imports from `registry.generated.jsx` to ensure JSX transformation by
+Next.js/Turbopack.
+- **Build-Shim Robustness**:
+- **Top-Level Returns**: The shim must wrap top-level `return` statements (common in MD-extracted code) in an async
+`View` function to be valid ESM.
+- **Object Exports**: Files exporting object literals (e.g., `export { a: 1 }`) must be transformed into a `const
+___exports = { ... }; export default ___exports;` pattern to avoid syntax errors in certain bundlers.
+- **Non-Indented Matching**: The shim uses strict regex to only transform *top-level* returns, preventing accidental
+wrapping of nested component logic.
+
+### 4. Threading Props Through DatacoreShim
+
+When a parent component (like `WebsiteBuilder`) needs to pass props (like `setCurrentPage`) to a deeply nested component
+(like `RetroMorphGame/HeroSection`), the prop must be threaded through the entire chain:
+
+```
+WebsiteBuilder → MarkdownRenderer → DatacoreShim → AsyncFactory → InnerComponent → ChildComponent
+```
+
+**Step-by-Step Guide:**
+
+#### A. Parent passes prop to MarkdownRenderer
+```javascript
+// WebsiteBuilder.jsx
+<MarkdownRenderer content="{component: RetroMorphGame}" setCurrentPage={setActiveTab} // ← Pass the prop ... />
+```
+
+#### B. MarkdownRenderer spreads via `{...props}` to DatacoreShim
+The MarkdownRenderer already does this via line ~148: `
+<Shim {...props} />`
+
+#### C. DatacoreShim must extract and forward the prop
+```javascript
+// DatacoreShim.jsx
+function DatacoreShim(props) {
+const { name, componentProps = {}, folderPath, STYLES, setCurrentPage } = props;
+// ↑ Extract it
+
+// Pass to async factory:
+const factoryResult = await Comp({
+...componentProps,
+setCurrentPage, // ← Include here
+...
+}, localDc);
+
+// Pass in final render:
+return
+<Component setCurrentPage={setCurrentPage} ... />;
+}
+```
+
+#### D. Async Factory must capture and forward to inner component
+```javascript
+// RetroMorphGame/index.jsx
+async function View({ folderPath, setCurrentPage: factorySetCurrentPage, ...props }) {
+// ↑ Capture from factory props with alias
+
+return function RetroMorphGame(componentProps) {
+// Use closure variable OR fallback to componentProps
+return (
+<HeroSection setCurrentPage={factorySetCurrentPage || componentProps?.setCurrentPage} />
+);
+}
+}
+```
+
+#### E. Child component uses the prop
+```javascript
+// HeroSection.jsx
+function HeroSection({ setCurrentPage, ... }) {
+// Use for internal navigation
+onClick={() => setCurrentPage && setCurrentPage('GAMES')}
+}
+```
+
+> [!IMPORTANT]
+> The async factory pattern creates a **closure**. Props passed to the factory (`factorySetCurrentPage`) are captured at
+factory-execution time. Props to the returned component (`componentProps`) are passed at render time. Use both with a
+fallback for maximum flexibility.
+
+### 5. Hook Parity
+Use the global `dc` object for all React hooks.
+- **Datacore**: `dc` is the native Datacore API.
+- **Web**: `page.jsx` injects real React hooks into `window.dc`.
+- **Requirements**: Ensure `useState`, `useEffect`, `useRef`, `useCallback`, and `useMemo` are all available in the
+shim.
+- **Rule**: Avoid `import { useState } from 'react'` inside the raw code blocks if the component needs to be shimmed;
+the build-shim will handle the conversion.
+
+### 6. UI Shimming
+Native Datacore elements (like `dc.Icon`) must have web fallbacks.
+- **Implementation**: Add shim components to `src/web/shim.js` to prevent "Element type is invalid" errors.
+
+## 🖥️ UI & UX Patterns
+- **Complex Settings**: Use a **Toolbar + Drawer** pattern for complex configurations (like `ControlPanel.jsx`) to keep
+the main view clean.
+- **Tabbed Interfaces**: Break down dense forms into logical tabs (e.g., Deploy, GitHub, Cloudflare, DNS).
+- **Feedback Loops**:
+- Lift status state (building/success/fail) to the parent component to show global indicators (badges) in the header.
+- Provide explicit "Busy" or "Live" badges.
+- **Input Styling**: Ensure text inputs and selects have sufficient height (`38px+`) and padding (`12px`).
+- **Vertical Centering**: Use `line-height: {height}` for `select` elements to ensure text is perfectly centered and not
+clipped by WebKit defaults.
+- **Z-Index Management**: Use high z-indices (`10000+`) for custom tooltips/popovers to ensure they aren't clipped by
+container overflows.
+
+## ☁️ Integrations (Cloudflare & GitHub)
+- **Keychain First**: All tokens (`GITHUB_TOKEN`, `CF_API_TOKEN`) must be stored in the native Keychain
+(`dc.app.secretStorage`).
+- **NO .env SECRETS**: Never write sensitive tokens to `.env` or `localStorage`. Cleartext storage is a security
+violation.
+- **Zone Fetching**: Explicitly set `per_page=50` when fetching Cloudflare zones.
+- **Resilient Polling**: All integration polling (e.g., Cloudflare deployment status) MUST implement graceful fallback
+for 404/Not Found errors.
+- **Action**: Stop the polling interval immediately if the target resource (project, repo) is reported missing by the
+API.
+- **Feedback**: Provide a clear UI state or log message explaining why the polling stopped and how the user can fix it
+(e.g., "Verify project name").
+- **Token Permissions**:
+- GitHub: `repo` / `public_repo` / `delete_repo`.
+- Cloudflare: `Account:Read`, `Pages:Edit`, `Zone:Read`, `DNS:Edit`.
+
+## 🔐 Native Keychain Management
+Use the high-level v1.11.4+ API for all sensitive data:
+```javascript
+const storage = dc.app.secretStorage;
+const token = await storage.getSecret('dc_github_token');
+await storage.setSecret('dc_github_token', 'ghp_...');
+```
+- **Injection**: The `ControlPanel` automatically injects these since into the build environment. Agents do not need to
+manage `.env` files for these variables.
+
+## 📜 Separation of Concerns (Content vs. Code)
+- **State Drives UI, Content Drives State**: Use the **Orchestrator Pattern** (`INDEX.md`) to define your site's
+structure (Navigation) and content (Pages).
+- **No Hardcoded Text**: Avoid burying copy in JSX. If a user might want to change it, put it in Markdown.
+- **Components as Tools**: Build generic wrappers (`WebsiteBuilder`, `HeroSection`) that accept content as props. Don't
+build "The About Page Component"; build a "Content Section" that renders `about.md`.
+
+## 🗺️ Navigation Management
+To add or remove navigation tabs (burger menu items):
+
+### 1. Primary Source: `INDEX.md`
+Edit `src/data/content/INDEX.md` to add/remove items from the `navigation` array.
+
+#### Simple Internal Links (Legacy)
+```yaml
+navigation:
+- HOME
+- GAMES
+```
+
+#### Extended Format (Recommended)
+Supports internal pages, external links, and separators:
+```yaml
+navigation:
+- label: BEGIN
+value: HOME
+- label: GAMES
+value: GAMES
+- label: ABOUT
+value: ABOUT
+- separator: true
+- label: HOME
+url: https://beto.group
+external: true
+- label: MARKETPLACE
+url: https://marketplace.beto.group
+external: true
+- label: SUPPORT
+url: https://beto.group/support
+external: true
+```
+
+> [!CAUTION]
+> **Do NOT use YAML comments (`#`) in INDEX.md!** The custom frontmatter parser doesn't fully support them and they may
+render as menu items.
+
+**Item Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `label` | string | Display text in the menu |
+| `value` | string | Internal route (for SPA navigation) |
+| `url` | string | External URL (opens in new tab) |
+| `external` | boolean | Marks as external (shows ↗ arrow) |
+| `separator` | boolean | Renders a horizontal divider line |
+
+### 2. Fallback in `Navbar.jsx`
+The `Navbar.jsx` component has a fallback array used when no `navItems` prop is passed. **Keep both sources in sync** to
+avoid discrepancies.
+
+### 3. After Changes
+Always run `npm run shim` to regenerate `.generated.jsx` files for the web build.
+
+### 4. Component-Level Navigation
+Some components (like `RetroMorphGame`) have their own internal navigation/leaderboards. These are **independent** of
+the main site navigation and should not be affected when modifying the burger menu.
+
+## 13. Cloudflare Pages Deployment
+
+### 1. Static Export Configuration
+To deploy to Cloudflare Pages (Standard/Static), you must configure Next.js for static export.
+- **`next.config.js`**: Set `output: 'export'`.
+- **Image Optimization**: Must use `images: { unoptimized: true }` as Cloudflare Pages doesn't support the default
+Next.js Image Optimization API.
+
+### 2. CI/CD & Log Filtering
+Cloudflare's build limits are strict. Massive log spam (e.g., from `jsconfig-paths-plugin`) can cause timeouts or
+truncated logs.
+- **Line-by-Line Filtering**: Use a wrapper script like `debug-build.js` to filter known spam *line-by-line*.
+- **Avoid Chunk Filtering**: Never filter whole chunks, as valuable error context might be lost.
+
+### 3. Keystatic & Admin Panel
+Keystatic requires dynamic API routes to function, which are incompatible with `output: 'export'`.
+- **Workflow**: Run Keystatic locally (`npm run dev`) to edit content.
+- **Production**: The `/admin` route and `/api/admin` endpoints should be static placeholders (or 404s) in the
+production build.
+- **GitHub Sync**: Push content changes to GitHub to trigger a new Cloudflare deployment.

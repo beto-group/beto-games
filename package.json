@@ -1,0 +1,29 @@
+{
+    "name": "76-next-website",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "shim": "node scripts/build-shim.js",
+        "clean-next": "node scripts/clean-next.js",
+        "patch": "node scripts/patch-keystatic.js",
+        "dev": "npm run clean-next && npm run shim && npm run patch && next dev",
+        "build": "npm run clean-next && npm run shim && (test \"$SKIP_PATCH\" = \"1\" || npm run patch) && node scripts/debug-build.js",
+        "pages:build": "npx @cloudflare/next-on-pages",
+        "clean": "node scripts/clean.js",
+        "start": "next start",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "@keystatic/core": "^0.5.48",
+        "@keystatic/next": "^5.0.4",
+        "next": "15.1.7",
+        "react": "19.0.0",
+        "react-dom": "19.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "22.13.1",
+        "@types/react": "19.2.14",
+        "@types/react-dom": "19.0.4",
+        "typescript": "5.9.3"
+    }
+}

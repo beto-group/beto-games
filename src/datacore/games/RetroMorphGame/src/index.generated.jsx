@@ -1,0 +1,190 @@
+"use client";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import * as stylesMod from './styles/styles.generated.jsx';
+import * as engineMod from './hooks/useRetroEngine.generated.jsx';
+import * as heroMod from './components/HeroSection.generated.jsx';
+import * as domMod from './utils/domUtils.generated.jsx';
+
+/**
+ * RetroMorph Game View Factory
+ * 
+ * A morphing mini-game agent skill (Snake -> Flappy -> Dino).
+ * Implements Full-Tab Lifecycle.
+ */
+async function View({ folderPath, isInception, setCurrentPage: factorySetCurrentPage, ...props }, dcOverride) {
+    const localDc = dcOverride || (typeof dc !== 'undefined' ? dc : window.dc);
+    // console.log("[RetroMorph] View Initializing at:", folderPath, "setCurrentPage:", !!factorySetCurrentPage);
+
+    // 1. Load Dependencies
+    let STYLES, useRetroEngine, HeroSection, findNearestAncestorWithClass, findDirectChildByClass;
+    try {
+        // const stylesMod = ... (lifted to top-level import)
+        STYLES = stylesMod.STYLES;
+
+        // const engineMod = ... (lifted to top-level import)
+        useRetroEngine = engineMod.useRetroEngine;
+
+        // const heroMod = ... (lifted to top-level import)
+        HeroSection = heroMod.HeroSection;
+
+        // const domMod = ... (lifted to top-level import)
+        findNearestAncestorWithClass = domMod.findNearestAncestorWithClass;
+        findDirectChildByClass = domMod.findDirectChildByClass;
+
+        /*
+        console.log("[RetroMorph] Dependencies Loaded:", {
+            STYLES: !!STYLES,
+            useRetroEngine: !!useRetroEngine,
+            HeroSection: !!HeroSection
+        });
+        */
+    } catch (e) {
+        console.error("[RetroMorph] Failed to load dependencies:", e);
+        return <div>Error loading RetroMorph: {e.message}</div>;
+    }
+
+    // 2. Resolve React
+    // Hooks provided by React import
+
+    // 3. Define the Inner Component
+    return function RetroMorphGame(componentProps) {
+        const componentId = useRef(Math.random().toString(36).substr(2, 5)).current;
+        const containerRef = useRef(null);
+        const stateRefs = useRef({}).current;
+
+        // Full-Tab Lifecycle Logic (Standardized Beto Pattern)
+        useEffect(() => {
+            if (isInception) return; // Skip full-tab logic if in inception mode
+            const container = containerRef.current;
+            if (!container) return;
+
+            const targetPaneContent = findNearestAncestorWithClass(container, "workspace-leaf-content");
+            if (!targetPaneContent) return;
+
+            const contentWrapper = findDirectChildByClass(targetPaneContent, "view-content") || targetPaneContent;
+            const currentParent = container.parentNode;
+            if (!currentParent) return;
+
+            // Save state for restoration
+            stateRefs.originalParent = currentParent;
+            stateRefs.parentPositionInfo = {
+                element: contentWrapper,
+                originalInlinePosition: contentWrapper.style.position,
+            };
+
+            // Placeholder to keep React happy
+            const placeholder = document.createElement("div");
+            placeholder.className = "screen-mode-placeholder";
+            placeholder.style.display = "none";
+            if (container.nextSibling) currentParent.insertBefore(placeholder, container.nextSibling);
+            else currentParent.appendChild(placeholder);
+            stateRefs.placeholder = placeholder;
+
+            // Reparent
+            if (window.getComputedStyle(contentWrapper).position === 'static') {
+                contentWrapper.style.position = "relative";
+            }
+            contentWrapper.appendChild(container);
+
+            // Apply immersive styles
+            requestAnimationFrame(() => {
+                Object.assign(contentWrapper.style, {
+                    padding: "0", margin: "0", height: "100%", width: "100%", display: "block", overflow: "hidden"
+                });
+
+                Object.assign(container.style, {
+                    position: "absolute",
+                    top: "0",
+                    left: "0",
+                    right: "0",
+                    bottom: "0",
+                    width: "100%",
+                    height: "100%",
+                    zIndex: "9998",
+                    overflow: "hidden",
+                    backgroundColor: "#000000",
+                });
+            });
+
+            // Global Chrome Hiding
+            const styleId = `retromorph-styles-${componentId}`;
+            let styleEl = document.getElementById(styleId);
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = styleId;
+                styleEl.innerHTML = `
+                  .status-bar { display: none !important; }
+                  .view-footer { display: none !important; }
+                  .workspace-leaf-content { overflow: hidden !important; }
+                `;
+                document.head.appendChild(styleEl);
+            }
+
+            return () => {
+                const style = document.getElementById(styleId);
+                if (style) style.remove();
+
+                if (stateRefs.placeholder?.parentNode) {
+                    stateRefs.placeholder.parentNode.replaceChild(container, stateRefs.placeholder);
+                } else if (stateRefs.originalParent) {
+                    stateRefs.originalParent.appendChild(container);
+                }
+
+                if (stateRefs.parentPositionInfo?.element) {
+                    stateRefs.parentPositionInfo.element.style.position = stateRefs.parentPositionInfo.originalInlinePosition || '';
+                }
+            };
+        }, []);
+
+        useEffect(() => {
+            /*
+            if (containerRef.current) {
+                console.log(`💎 [RetroMorph] Container Height: ${containerRef.current.offsetHeight}px, Parent: ${containerRef.current.parentElement?.offsetHeight}px`);
+            }
+            */
+        }, []);
+
+        return (
+            <div ref={containerRef} style={{ width: '100%', height: '100%', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative', overflow: 'hidden' }}>
+                <style>{`
+                  @keyframes slideInLeft {
+                    0% { transform: translateX(-120%); opacity: 0; }
+                    100% { transform: translateX(0); opacity: 1; }
+                  }
+                  @keyframes slideOutLeft {
+                    0% { transform: translateX(0); opacity: 1; }
+                    100% { transform: translateX(-120%); opacity: 0; }
+                  }
+                  @keyframes keyTapPulse {
+                    0% { background: rgba(255,255,255,0.05); color: #fff; box-shadow: none; }
+                    50% { background: #fff; color: #000; box-shadow: 0 0 15px #fff; }
+                    100% { background: rgba(255,255,255,0.05); color: #fff; box-shadow: none; }
+                  }
+                  @keyframes fingerHoldSwell {
+                    0% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+                    20% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+                    80% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+                    100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+                  }
+                  @keyframes pulse {
+                    0% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.05); opacity: 0.8; }
+                    100% { transform: scale(1); opacity: 1; }
+                  }
+                  @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                  }
+                  @keyframes float {
+                    0% { transform: translateY(18vh); }
+                    50% { transform: translateY(calc(18vh - 10px)); }
+                    100% { transform: translateY(18vh); }
+                  }
+                `}</style>
+                <HeroSection dc={localDc} STYLES={STYLES} useRetroEngine={useRetroEngine} setCurrentPage={factorySetCurrentPage || componentProps?.setCurrentPage} />
+            </div>
+        );
+    }
+}
+
+export {  View  };

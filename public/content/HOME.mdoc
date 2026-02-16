@@ -1,0 +1,5 @@
+---
+permalink: HOME
+---
+
+{component: RetroMorphGame}

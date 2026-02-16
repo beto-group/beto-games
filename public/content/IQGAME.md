@@ -1,0 +1,5 @@
+---
+permalink: IQGAME
+---
+
+{component: IQGame}

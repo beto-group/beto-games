@@ -1,0 +1,3 @@
+# GLOBAL LEADERBOARD
+
+{component: GlobalLeaderboard}

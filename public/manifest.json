@@ -1,0 +1,16 @@
+{
+    "name": "Nexus Core",
+    "short_name": "Nexus",
+    "description": "The Next-Gen Software Platform",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "icons": [
+        {
+            "src": "/branding/nexus-icon.png",
+            "sizes": "1024x1024",
+            "type": "image/png"
+        }
+    ]
+}

@@ -1,0 +1,498 @@
+# Troubleshooting Guide: 76 NextWebsite
+
+This guide documents common runtime errors encountered in the Next.js + Datacore Hybrid environment and their solutions.
+
+## 1. Runtime Errors
+
+### 🔴 `Element type is invalid: expected a string... but got: undefined`
+**Symptoms**: The page crashes with a React error stack trace pointing to a dynamic component (e.g., `Arena`,
+`DatacoreShim`).
+**Cause**: A component rendered inside an `async function View` factory is `undefined`.
+- This happens because `async` factories are executed in a separate isolation scope and do NOT inherit imports or props
+from the parent file automatically.
+- Example: `Arena.jsx` tries to return `
+<DatacoreShim />`, but `DatacoreShim` was not passed to the factory.
+
+**Solution**:
+1. **Inject Dependencies**: Ensure the parent (e.g., `DatacoreShim` or `MarkdownRenderer`) passes the component logic in
+`props`.
+2. **Update Factory**:
+```javascript
+// In DatacoreShim.jsx (The Loader)
+await Comp({ ...props, ...props.components }); // Pass dependencies
+
+// In Arena.jsx (The Component)
+async function View({ DatacoreShim }) { // Destructure dependency
+return function Arena() {
+return
+<DatacoreShim ... />;
+}
+}
+```
+
+### 🔴 `ReferenceError: STYLES is not defined`
+**Symptoms**: Component crashes stating `STYLES` is not defined.
+**Cause**: The `async View` factory expects `STYLES` to be available via `dc.require` or props, but it wasn't passed.
+**Solution**:
+- **Shim**: Ensure `DatacoreShim` passes `STYLES={STYLES}` to the factory call.
+- **Renderer**: Ensure `MarkdownRenderer` passes `STYLES` to `DatacoreShim`.
+
+### 🔴 `An unknown Component is an async Client Component`
+**Symptoms**: Next.js 15+ Error Overlay on the client side.
+**Cause**: You tried to render an `async function` directly in JSX: `
+<MyAsyncComponent />`. Next.js Client Components must be synchronous.
+**Solution**:
+- Use `DatacoreShim` to resolve the async component to a sync component before rendering.
+- **Never** render the factory result directly if it's a Promise.
+
+### 🔴 `Error: File not found: .../Component.jsx` (Datacore Require)
+**Symptoms**: The Datacore script fails with a "File not found" error pointing to a `require('./Component.jsx')` call
+inside a shared component (e.g., `Navbar.jsx`).
+**Cause**: `dc.require` resolution in Obsidian can be brittle with relative paths inside shared components, especially
+when those components are `require`d by other components in a chain.
+**Solution**:
+- **Prop Injection**: Do not `require` sub-components inside shared files. Instead, pass them as props from the entry
+point (`index.jsx`).
+```javascript
+// BAD
+// Navbar.jsx
+const { Logo } = require('./Logo');
+
+// GOOD
+// Navbar.jsx
+function Navbar({ Logo }) { ... }
+
+// index.jsx
+const { Logo } = await dc.require('.../Logo.jsx');
+<Navbar Logo={Logo} />
+```
+
+## 2. Layout & Style Issues
+
+### 🟡 `position: fixed` Header Jumps to Top of Window
+**Symptoms**: In Obsidian (Datacore view), a fixed header appears at the very top of the Obsidian app, covering the
+title bar or other UI, instead of staying inside the view pane.
+**Cause**: `position: fixed` is relative to the viewport (the entire window) unless a parent has a `transform`,
+`filter`, or `perspective` property.
+**Solution**:
+- Add `transform: translate3d(0,0,0)` to the root container of your Datacore view (`src/index.jsx`). This creates a new
+containing block for fixed position elements.
+```javascript
+<div style={{ position: 'relative' , transform: 'translate3d(0,0,0)' , ... }}>
+    <Navbar style={{ position: 'fixed' }} />
+</div>
+```
+
+### 🟡 Component "Collapses" at 400px
+**Symptoms**: A structural component (like a game) that should be full-height is restricted to exactly 400px.
+**Cause**: The `MarkdownRenderer.jsx` fallback block often has a hardcoded `minHeight: 400px`.
+**Solution**: Remove the hardcoded `minHeight` and apply the Standardized Flex Chain (see BEST_PRACTICES).
+
+### 🟡 Local Dependencies fail to load in Shim
+**Symptoms**: `dc.require` inside a component (e.g. `RetroMorphGame/src/index.jsx`) fails to find local files.
+**Cause**: The `folderPath` passed to `DatacoreShim` was pointing to the root instead of the component's subdirectory.
+**Solution**: Ensure `DatacoreShim` resolves the component's specific `folderPath` before evaluation.
+
+## 3. Build & Shim Errors
+
+### 🟡 `Module not found: Can't resolve ...` in .generated.jsx
+**Cause**: Relative paths were not correctly rewritten during the shim process.
+**Solution**:
+- Run `npm run shim`.
+- Check `scripts/build-shim.js` logic for `path.relative` calculations.
+- Ensure the component in `src/datacore/` is using standard relative imports (e.g., `../utils/foo`).
+
+### 🟡 `Module not found: Can't resolve 'child_process'` (or other Node built-ins)
+**Symptoms**: Build fails during Next.js bundling with errors for `fs`, `path`, `child_process`, `os`, etc.
+**Cause**: Component dependencies (like `gitUtils.js`) use Node.js-only modules that don't exist in the browser.
+**Solution**:
+- Ensure `scripts/build-shim.js` includes the **Intelligent Stubbing** map.
+- The shim script automatically replaces `require('child_process')` with a functional mock (e.g., `{ exec: () => ({ on:
+() => {} }) }`) during transformation.
+- Run `npm run shim` to regenerate shims with stubs.
+
+### 🔴 `Parsing ecmascript source code failed / Expression expected`
+**Symptoms**: Build fails with a syntax error pointing to a Node.js stub (e.g., in `ControlPanel.generated.jsx`).
+**Cause**: An object literal stub (like `{ shell: ... }`) appearing at the start of a statement block is misparsed as a
+code block.
+**Solution**:
+- Standardize on **Expression Wrapping** in `build-shim.js`.
+- All object stubs must be wrapped in parentheses: `({ ... }) /* Stubbed for Web */`.
+- This ensures the parser treats the literal as an expression.
+
+### 🟡 `dc.require` Lifting Failures
+**Symptoms**: Variables assigned via `dc.require` are `undefined` on the web despite the file existing.
+**Cause**: The lifting regex in `build-shim.js` missed certain assignment patterns (e.g., `name = await dc.require(...)`
+without `const`) or failed to resolve `.js` extensions to `.generated.jsx`.
+**Solution**:
+- Use the **Robust Lifting Regex** (Pattern C) in `build-shim.js` which handles un-declared assignments.
+- Ensure all lifted imports point to `.generated.jsx`.
+
+## 4. Hydration Mismatch
+**Symptoms**: "Text content does not match server-rendered HTML".
+**Solution**:
+- Add `suppressHydrationWarning` to the `<html>` tag in `layout.jsx`.
+- **Admin Lock Issue**: External scripts or environment injectors may add classes like `antigravity-scroll-lock` to the
+`
+
+<body>`. Ensure these are accounted for or suppressed to avoid hydration mismatches that crash the CMS UI.
+    - This is frequent when using browser extensions or dynamic timestamps.
+
+    ## 5. Component Container Height Collapse
+
+    ### 🔴 `Canvas DOM: 1200x0` / `Container Height: 0px`
+    **Symptoms**: Full-screen component (e.g., RetroMorphGame) renders as a black/blank screen. Console logs show DOM
+    height is 0px.
+    **Console Clue**: `💎 [HeroSection] Canvas internal: 800x600, DOM: 1200x0`
+
+    **Root Cause**: Using `flex: 1` on child containers only works when the parent has an **explicit height**. Without
+    it, `flex: 1` has nothing to fill and collapses to 0px.
+
+    **The Fix (2-Part):**
+
+    1. **WebsiteBuilder Root Container** - Add explicit `height: 100vh`:
+    ```javascript
+    // WebsiteBuilder.jsx - Root container MUST have explicit height
+    <div style={{ ...STYLES.container, height: '100vh' , // ← Establishes the height chain display: 'flex' ,
+        flexDirection: 'column' , overflow: 'hidden' }}>
+        ```
+
+        2. **MarkdownRenderer Component Containers** - Use `flex: 1` (NOT `height: 100%`):
+        ```javascript
+        // MarkdownRenderer.jsx - Child containers fill remaining space
+        <div style={{ width: '100%' , flex: 1, // ← Fills remaining space after navbar display: 'flex' ,
+            flexDirection: 'column' , overflow: 'hidden' }}>
+            <Shim ... />
+        </div>
+        ```
+
+        **Why This Works:**
+        - `height: 100vh` on root → flex children have a defined space to fill
+        - `flex: 1` on children → fills remaining space after navbar
+        - `overflow: hidden` → prevents scrolling (matches Datacore behavior)
+
+        - `overflow: hidden` → prevents scrolling (matches Datacore behavior)
+
+        ### 🔴 Canvas Only Draws in Top-Left Corner After Resize
+        **Symptoms**: The canvas game elements (snake, grid) are stuck in a small box at the top-left, even though the
+        canvas DOM element has expanded to full screen.
+        **Cause**: Closure Trap in `useEffect`. The `requestAnimationFrame` loop was initialized with stale values for
+        `CANVAS_WIDTH` or `GRID_SIZE`.
+        **Solution**: Add all sizing constants to the `useEffect` dependency array that manages the render loop.
+        ```javascript
+        useEffect(() => {
+        const render = () => { ... uses CANVAS_WIDTH ... };
+        render();
+        return () => cancelAnimationFrame(...);
+        }, [CANVAS_WIDTH, CANVAS_HEIGHT, GRID_SIZE]); // ← MUST have these
+        ```
+
+        ### 🟡 Internal Dependencies Fail via dc.require on Web
+        **Symptoms**: `Element type is invalid: expected a string... but got: undefined` when a component uses
+        `dc.require` for internal files (e.g., `RetroMorphGame/src/components/HeroSection`).
+        **Cause**: The web shim's Registry lookup matches the parent (`RetroMorphGame`) instead of the specific internal
+        dependency path.
+        **Solution**: Add explicit checks in `src/web/shim.js` BEFORE Registry lookup:
+
+        ```javascript
+        // shim.js - Handle internal dependencies FIRST
+        if (path.includes('RetroMorphGame')) {
+        if (path.includes('HeroSection')) {
+        return await import('../datacore/games/RetroMorphGame/src/components/HeroSection.generated.jsx');
+        }
+        if (path.includes('useRetroEngine')) {
+        return await import('../datacore/games/RetroMorphGame/src/hooks/useRetroEngine.generated.jsx');
+        }
+        // Add other internal dependencies...
+        }
+        // THEN try Registry lookup
+        ```
+
+        ## 6. Build Persistence Issues
+
+        ### 🟡 Fix Disappears After Rebuild
+        **Symptoms**: A fix works in dev but disappears after running `npm run shim` or deploying from Datacore.
+        **Cause**: Editing `.generated.jsx` files directly instead of their source files. The shim regenerates these on
+        every build.
+        **Critical Rule**:
+        - ❌ **Don't edit**: `MarkdownRenderer.generated.jsx`, `shim.generated.jsx`
+        - ✅ **Do edit**: `MarkdownRenderer.jsx`, `shim.js`
+        - Source files are the single source of truth.
+
+        ---
+
+        ## 7. Hook Shadowing Issues
+
+        ### 🔴 Component Shows "Loading..." Forever / Hooks are Undefined
+        **Symptoms**: A component (e.g., `RetroMorphGame`) gets stuck on the loading spinner or shows a blank page.
+        Console may show `useState is not a function` or similar.
+        **Cause**: Hook shadowing. The component source has a pattern like:
+        ```javascript
+        const { useState, useEffect, useRef } = localDc;
+        ```
+        This *shadows* the React hooks imported at the top of the generated file if `localDc` is `undefined` or doesn't
+        have hooks.
+
+        **Why It Happens**: The `build-shim.js` regex that strips hook extractions only matches `dc` and `dcApi`, but
+        NOT `localDc`.
+
+        **Solution**: Update the regex in `scripts/build-shim.js` (around line 85) to include `localDc`:
+        ```javascript
+        // BEFORE
+        /^(\s*)const\s+\{.*?\}\s*=\s*\b(?:dcApi|dc)\b/gm
+
+        // AFTER - Include localDc
+        /^(\s*)const\s+\{.*?\}\s*=\s*\b(?:dcApi|dc|localDc)\b/gm
+        ```
+
+        **Verification**: After running `npm run shim`, check the `.generated.jsx` file:
+        ```javascript
+        // Should show this (stripped):
+        // Hooks provided by React import
+
+        // NOT this (broken):
+        const { useState, useEffect, useRef } = localDc;
+        ```
+
+        ---
+
+        ## 8. Build-Shim Regex Issues
+
+        ### 🔴 Malformed Imports in Generated Files
+        **Symptoms**: Build fails or runtime crashes with syntax errors. Generated file has broken imports like:
+        ```javascript
+        import { // Load Styles
+        ({ STYLES } from './src/styles/styles.generated.jsx';
+        ```
+        Or invalid renaming syntax:
+        ```javascript
+        import { View: EvolutionEngine } from '...'; // WRONG
+        ```
+
+        **Cause**: The build-shim.js regex for Pattern A (line ~22) has issues:
+        1. **Matching `try {`**: The regex `\(?(?:const\s+)?\{` can match bare `{` from `try {` blocks.
+        2. **Not converting rename syntax**: JS destructuring uses `View: Alias` but ES6 imports use `View as Alias`.
+
+        **Solution**: Update the Pattern A regex in `scripts/build-shim.js`:
+
+        ```javascript
+        // 1. Require either leading ( OR const before { to avoid matching try/if blocks
+        // 2. Convert View: Alias to View as Alias for imports
+        let transformedBody = content.replace(
+        /(?:\((?:\s*\{)|(?:const\s+\{))\s*([^}]+)\s*\}\s*=\s*(?:await\s+)?(?:dc|localDc)\.require\(folderPath\s*\+\s*['"]([^'"]+)['"]\)\)?;?(?:\s*\|\|\s*\{\})?\)?;?/g,
+        (match, destructuredVars, relativePath) => {
+        const variables = destructuredVars.split(',').map(v => {
+        const trimmed = v.trim();
+        // Convert JS destructuring rename (Name: Alias) to ES6 import (Name as Alias)
+        if (trimmed.includes(':')) {
+        const [original, alias] = trimmed.split(':').map(s => s.trim());
+        return `${original} as ${alias}`;
+        }
+        return trimmed;
+        }).filter(v => v);
+        // ... rest of transform
+        }
+        );
+        ```
+
+        **Verification**: After `npm run shim`, check `src/index.generated.jsx`:
+        ```javascript
+        // Should see:
+        import { STYLES } from './src/styles/styles.generated.jsx';
+        import { View as EvolutionEngine } from './src/datacore/games/EvolutionEngine/index.generated.jsx';
+
+        // NOT:
+        import { View: EvolutionEngine } from '...';
+        ```
+
+        ---
+
+        ## 9. Routing Mismatch Issues
+
+        ### 🔴 Homepage Shows "# Loading..." Instead of RetroMorphGame
+        **Symptoms**: Visiting `/` shows a white "Loading..." H1 text instead of the game.
+        **Cause**: `useRouting.jsx` sets `activeTab = 'INDEX'` for the root URL `/`, but `WebsiteBuilder.jsx`
+        conditionally renders `RetroMorphGame` only when `activeTab === 'HOME'`.
+
+        **The Mismatch**:
+        ```javascript
+        // useRouting.jsx (line ~54)
+        const finalTab = rawPath === '' ? 'INDEX' : rawPath.toUpperCase();
+        // ^^^^^^^^ PROBLEM
+
+        // WebsiteBuilder.jsx (line ~291)
+        {activeTab === 'HOME' ? (
+        <MarkdownRenderer content="{component: RetroMorphGame}" ... />
+        // ^^^^^^^^ EXPECTS 'HOME'
+        ```
+
+        **Solution**: Change `'INDEX'` to `'HOME'` in `useRouting.jsx`:
+        ```javascript
+        // BEFORE
+        const finalTab = rawPath === '' ? 'INDEX' : rawPath.toUpperCase();
+
+        // AFTER
+        const finalTab = rawPath === '' ? 'HOME' : rawPath.toUpperCase();
+        ```
+
+        **Also check line ~28**:
+        ```javascript
+        const currentPathUpper = rawPath === '' ? 'HOME' : rawPath.toUpperCase();
+        ```
+
+        **Verification**: After `npm run shim`, console should show:
+        ```
+        [useRouting] Syncing state from URL: HOME
+        ```
+
+        ---
+
+        ## 10. Navigation Key Collision
+
+        ### 🟡 `Encountered two children with the same key`
+        **Symptoms**: Console warning about duplicate keys in Navbar, typically when an internal route and external link
+        share the same label (e.g., both called "HOME").
+
+        **Console Clue**:
+        ```
+        Encountered two children with the same key, `HOME`. Keys should be unique...
+        at Navbar (../Navbar.generated.jsx)
+        ```
+
+        **Cause**: The React key was generated as `nav.value || nav.label || index`. If internal route has `value: HOME`
+        and external link has `label: HOME`, both resolve to key `"HOME"`.
+
+        **Solution**: Prefix external link keys with `ext-` to ensure uniqueness:
+        ```javascript
+        // Navbar.jsx
+        const navKey = isExternal
+        ? `ext-${nav.label || index}`
+        : (nav.value || nav.label || index);
+
+        return (
+        <div key={navKey} ...>
+            ```
+
+            **Result**:
+            - Internal `HOME` → key = `HOME`
+            - External `HOME` → key = `ext-HOME`
+
+            ---
+
+            ## 11. YAML Comments Rendered as Menu Items
+
+            ### 🟡 Burger Menu Shows "INTERNAL PAGES" or "# COMMENT" as Items
+            **Symptoms**: YAML comments from `INDEX.md` appear as navigation items in the burger menu.
+
+            **Cause**: The custom frontmatter parser in `WebsiteBuilder.jsx` doesn't fully strip YAML comments when they
+            appear on their own lines in navigation blocks.
+
+            **Solution**: **Do NOT use YAML comments in `INDEX.md` navigation block**:
+            ```yaml
+            # BAD - Comments will render as menu items
+            navigation:
+            # Internal Pages
+            - label: BEGIN
+            value: HOME
+
+            # GOOD - No comments
+            navigation:
+            - label: BEGIN
+            value: HOME
+            ```
+
+            **Note**: The parser DOES support multi-line item definitions (label, value, url, external, separator). Just
+            avoid `#` comments.
+
+            ---
+
+            ## 12. Integration & Deployment Errors
+
+            ### 🔴 `Polling failed Error: Project not found`
+            **Symptoms**: The console is spammed with errors every 5 seconds. The "Deploy" status in the Control Panel
+            might flicker or show "Idle" despite polling.
+            **Cause**: `DeploymentManager.jsx` is polling a Cloudflare project name that does not exist in the connected
+            account.
+            **Solution**:
+            1. **Stop Polling**: Ensure `cloudflareUtils.js` returns `{ notFound: true }` and `DeploymentManager.jsx`
+            detects this to call `setIsPolling(false)`.
+            2. **Verify Project Name**: Go to the **Pages** tab in the Control Panel and ensure the "Project Name"
+            matches your Cloudflare Pages project.
+            3. **Auto-Initialization**: Check that the project name defaults to the folder basename in `useEffect`
+            during initialization if no saved name is found.
+
+            ### 🟡 GitHub Push Fails with "nothing to commit"
+            **Symptoms**: The deployment stops because git thinks there are no changes.
+            **Cause**: The `initializeAndPush` utility in `gitUtils.js` tries to commit even if `git status` is clean.
+            **Solution**: The `initializeAndPush` function now checks `git status --porcelain` before attempting to
+            commit. If the repo is clean, it skips the commit step and proceeds directly to push/deployment, preventing
+            the error.
+
+            ---
+
+            ## 13. Keystatic CMS & Admin Redirects
+
+            ### 🔴 `/admin` Redirects to `/keystatic` or Sidebar Links Point to `/keystatic`
+            **Symptoms**: You want the CMS at `/admin`, but it keeps bouncing back or links inside the CMS sidebar point
+            to the wrong path.
+            **Cause**: Keystatic has a default base path of `/keystatic`. Moving the route folder to `src/app/admin` is
+            not enough.
+
+            **Solutions**:
+            1. **Config Overrides**: Set `ui.publicPath: '/admin'` in `keystatic.config.tsx`.
+            2. **Routing Patches**:
+            - **`useRouting.jsx`**: Add checks to ignore `/admin` and `/keystatic` paths in the `useEffect` hooks that
+            sync URL with sidebar state. Failure to do this will cause the site router to "hijack" the CMS route.
+            - **`WebsiteBuilder.jsx`**: Add a check to prevent setting an `initialTab` if the path starts with `/admin`.
+            3. **Server-Side Redirects**: Use `next.config.js` to handle wildcard redirects:
+            ```javascript
+            async redirects() {
+            return [{ source: '/keystatic/:path*', destination: '/admin/:path*', permanent: false }]
+            }
+            ```
+
+            ## 14. Cloudflare & Static Export Issues
+
+            ### 🔴 Silent Build Failure (Exit Code 1, No Output)
+            **Symptoms**: The build fails immediately with `Exit code: 1` but no error message is printed, even with
+            `debug-build.js`.
+            **Cause**: Missing TypeScript definitions. Next.js 15+ in CI environments is very strict. If packages like
+            `@types/node` or `@types/react-dom` are missing, the build process may silently bail out before hitting the
+            custom logger.
+            **Solution**:
+            1. **Install Missing Types**:
+            ```bash
+            npm install --save-dev @types/node @types/react-dom
+            ```
+            2. **Verify Log Filtering**: Ensure `debug-build.js` uses *line-by-line* filtering. Chunk-based filtering
+            can accidentally hide error messages if they appear in the same buffer as spam.
+
+            ### 🔴 `Page "..." cannot use both "use client" and export function "generateStaticParams()"`
+            **Symptoms**: Build fails on a page that needs to be static (for `output: 'export'`) but uses client-side
+            interactivity.
+            **Cause**: `generateStaticParams` runs at build time on the server. If the file is marked `"use client"`, it
+            creates a conflict.
+            **Solution**:
+            - **Remove `"use client"`**: If the component doesn't actually need hooks/interactivity.
+            - **Split Component**: Move the client-side logic to a sub-component. Keep the `page.tsx` as a Server
+            Component that exports `generateStaticParams`.
+
+            ### 🔴 `Page "..." is missing "generateStaticParams()"` (Optional Catch-all)
+            **Symptoms**: Build fails on `[[...slug]]` or `[[...params]]` routes with `output: 'export'`.
+            **Cause**: Next.js requires explicit paths for all static routes. Returning `[]` is not enough for the root
+            path of an optional catch-all.
+            **Solution**: Return an array containing an empty params object to generate the base path:
+            ```javascript
+            export function generateStaticParams() {
+            return [{ params: [] }]; // Generates /my-route
+            }
+            ```
+
+            ### 🔴 Dynamic API Routes in Static Export
+            **Symptoms**: `Error: export const dynamic = "force-static" ... not configured on route ...`
+            **Cause**: `output: 'export'` does not support dynamic server-side API routes.
+            **Solution**:
+            - **Convert to Static**: Change `export const dynamic = 'force-static'`.
+            - **Disable Admin APIs**: For Keystatic on Cloudflare Pages, you cannot run the API routes. Replace the
+            admin API handlers with static 404s or dummy responses, and force content editing to happen locally (`npm
+            run dev`).
