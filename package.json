@@ -3,7 +3,8 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "shim": "node scripts/build-shim.js",
+        "favicons": "node scripts/generate-favicons.js",
+        "shim": "node scripts/generate-favicons.js && node scripts/build-shim.js",
         "clean-next": "node scripts/clean-next.js",
         "patch": "node scripts/patch-keystatic.js",
         "dev": "npm run clean-next && npm run shim && npm run patch && next dev",

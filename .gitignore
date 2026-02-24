@@ -38,3 +38,6 @@ Thumbs.db
 .trash_bin/
 .eslintcache
 *.tsbuildinfo
+node_modules
+.next
+out

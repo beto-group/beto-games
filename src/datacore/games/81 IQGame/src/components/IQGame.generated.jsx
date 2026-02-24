@@ -30,15 +30,14 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
 
 
     return (
-        <div style={{
-            ...styles.container,
-            justifyContent: 'flex-start',
-            overflowY: 'auto',
-            padding: '24px 0'
-        }}>
+        <div style={styles.container}>
             {/* Overlays are moved to the end of the file or handled at the end of the return block */}
 
             <style>{`
+                body, html {
+                    overflow: hidden !important;  /* Kill ALL page scroll while game is mounted */
+                    overscroll-behavior: none !important;
+                }
                 .iq-summary-icon {
                     display: inline-flex;
                     align-items: center;
@@ -87,38 +86,47 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                     onClick={quitGame}
                     style={{
                         position: 'absolute',
-                        top: '40px',
-                        right: '40px',
+                        top: 'clamp(10px, 3vw, 40px)',
+                        right: 'clamp(10px, 3vw, 40px)',
                         cursor: 'pointer',
-                        padding: '12px 24px',
+                        padding: 'clamp(6px, 2vw, 12px) clamp(12px, 4vw, 24px)',
                         borderRadius: '6px',
                         background: 'rgba(255, 77, 77, 0.2)',
                         border: '1px solid rgba(255, 77, 77, 0.4)',
                         color: '#ff4d4d',
-                        fontSize: '14px',
+                        fontSize: 'clamp(10px, 2.5vw, 14px)',
                         letterSpacing: '0.1em',
                         fontWeight: '700',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '12px',
+                        gap: '8px',
                         zIndex: 100
                     }}
                 >
-                    <dc.Icon icon="x" style={{ width: '20px', height: '20px' }} />
+                    <dc.Icon icon="x" style={{ width: '16px', height: '16px' }} />
                     EXIT
                 </div>
             )}
 
-            <div style={styles.glassCard}>
+            <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 'clamp(16px, 4vh, 40px) 16px',
+                boxSizing: 'border-box',
+            }}>
                 {gameState === 'idle' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px' }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <h1 style={styles.title}>IQ GAME</h1>
-                            <p style={styles.subtitle}>DUAL N-BACK MEMORY TRAINING</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', gap: 'clamp(12px, 2.5vh, 24px)' }}>
+                        <div style={{ textAlign: 'center', flexShrink: 0, marginBottom: 'clamp(8px, 2vh, 24px)' }}>
+                            <h1 style={{ ...styles.title }}>IQ GAME</h1>
+                            <p style={{ ...styles.subtitle }}>DUAL N-BACK MEMORY TRAINING</p>
                         </div>
 
                         {viewMode === 'main' ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(10px, 1.5vh, 16px)', alignItems: 'center', width: '100%', flexShrink: 0 }}>
                                 <button
                                     className="iq-main-btn"
                                     style={{ ...styles.button, ...styles.buttonPrimary }}
@@ -132,12 +140,10 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                 </button>
                                 <button
                                     className="iq-main-btn"
-                                    style={{ ...styles.button, ...styles.buttonSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    style={{ ...styles.button, ...styles.buttonSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                     onClick={() => setShowTutorial(true)}
                                 >
-                                    <span className="iq-btn-icon">
-                                        <dc.Icon icon="help-circle" />
-                                    </span>
+                                    <dc.Icon icon="help-circle" size={16} />
                                     HOW TO PLAY
                                 </button>
                                 <button
@@ -158,45 +164,42 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                         color: '#d8b4fe',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        gap: '8px',
                                     }}
                                 >
-                                    <span className="iq-btn-icon">
-                                        <dc.Icon icon="bar-chart-2" />
-                                    </span>
+                                    <dc.Icon icon="bar-chart-2" size={16} />
                                     VIEW STATS
                                 </button>
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-                                <div style={{ display: 'flex', gap: '40px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(20px, 3vh, 36px)', width: '100%', flexShrink: 0 }}>
+                                <div style={{ display: 'flex', gap: 'clamp(24px, 8vmin, 80px)', justifyContent: 'center', flexWrap: 'wrap' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em' }}>N LEVEL</div>
+                                        <div style={{ fontSize: 'clamp(10px, 1.5vmin, 13px)', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>N LEVEL</div>
                                         <div style={styles.selector}>
                                             <button style={styles.selectorBtn} onClick={() => setCurrentN(Math.max(1, currentN - 1))}>-</button>
                                             <div style={styles.nValue}>{currentN}</div>
                                             <button style={styles.selectorBtn} onClick={() => setCurrentN(Math.min(9, currentN + 1))}>+</button>
                                         </div>
                                     </div>
-
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em' }}>INTERVAL (S)</div>
+                                        <div style={{ fontSize: 'clamp(10px, 1.5vmin, 13px)', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>INTERVAL (S)</div>
                                         <div style={styles.selector}>
                                             <button style={styles.selectorBtn} onClick={() => setCurrentInterval(Math.max(500, currentInterval - 500))}>-</button>
-                                            <div style={{ ...styles.nValue, width: '60px' }}>{(currentInterval / 1000).toFixed(1)}</div>
+                                            <div style={{ ...styles.nValue, width: '64px' }}>{(currentInterval / 1000).toFixed(1)}</div>
                                             <button style={styles.selectorBtn} onClick={() => setCurrentInterval(Math.min(10000, currentInterval + 500))}>+</button>
                                         </div>
                                     </div>
                                 </div>
-
                                 <button style={{ ...styles.button, ...styles.buttonPrimary }} onClick={startRound}>
                                     START SESSION
                                 </button>
                                 <button
-                                    style={{ ...styles.button, ...styles.buttonSecondary, border: 'none' }}
+                                    style={{ ...styles.button, ...styles.buttonSecondary, border: 'none', background: 'transparent', opacity: 0.6 }}
                                     onClick={() => setViewMode('main')}
                                 >
-                                    BACK
+                                    ← BACK
                                 </button>
                             </div>
                         )}
@@ -226,11 +229,15 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                         ...styles.controls,
                         position: 'relative',
                         zIndex: 2000,
-                        marginTop: '40px',
+                        marginTop: 'clamp(12px, 3vh, 24px)', // Reduced margin
                         display: 'flex',
-                        gap: '40px',
+                        gap: 'clamp(10px, 4vw, 32px)',
                         pointerEvents: 'auto',
-                        paddingBottom: '20px'
+                        paddingBottom: 'clamp(10px, 3vh, 20px)',
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        width: '100%',
+                        justifyContent: 'center'
                     }}>
                         <div
                             className="iq-game-btn"
@@ -242,13 +249,21 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                 cursor: 'pointer',
                                 userSelect: 'none',
                                 whiteSpace: 'nowrap',
-                                width: '240px',
+                                width: 'min(90%, 240px)',
                                 flexShrink: 0,
-                                border: activeKeys.pos ? '3px solid #00ff88' : '2px solid rgba(138, 43, 226, 0.6)',
-                                background: activeKeys.pos ? 'rgba(0, 255, 136, 0.3)' : 'rgba(138, 43, 226, 0.15)',
-                                color: activeKeys.pos ? '#00ff88' : '#ffffff',
-                                boxShadow: activeKeys.pos ? '0 0 20px rgba(0, 255, 136, 0.4)' : 'none',
-                                transition: 'all 0.15s ease'
+                                margin: '0',
+                                border: activeKeys.pos
+                                    ? '2px solid #8a2be2'
+                                    : '1px solid rgba(255,255,255,0.1)',
+                                background: activeKeys.pos
+                                    ? 'rgba(138, 43, 226, 0.45)'
+                                    : 'rgba(255,255,255,0.04)',
+                                color: activeKeys.pos ? '#fff' : 'rgba(255,255,255,0.45)',
+                                boxShadow: activeKeys.pos
+                                    ? '0 0 24px rgba(138, 43, 226, 0.5), inset 0 0 12px rgba(138, 43, 226, 0.2)'
+                                    : 'none',
+                                transform: activeKeys.pos ? 'scale(0.97)' : 'scale(1)',
+                                transition: 'all 0.12s ease'
                             }}
                             onPointerDown={(e) => { e.preventDefault(); checkMatch('pos'); }}
                             onClick={(e) => { e.preventDefault(); checkMatch('pos'); }}
@@ -268,13 +283,21 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                 cursor: 'pointer',
                                 userSelect: 'none',
                                 whiteSpace: 'nowrap',
-                                width: '240px',
+                                width: 'min(90%, 240px)',
                                 flexShrink: 0,
-                                border: activeKeys.sound ? '3px solid #00ff88' : '2px solid rgba(138, 43, 226, 0.6)',
-                                background: activeKeys.sound ? 'rgba(0, 255, 136, 0.3)' : 'rgba(138, 43, 226, 0.15)',
-                                color: activeKeys.sound ? '#00ff88' : '#ffffff',
-                                boxShadow: activeKeys.sound ? '0 0 20px rgba(0, 255, 136, 0.4)' : 'none',
-                                transition: 'all 0.15s ease'
+                                margin: '0',
+                                border: activeKeys.sound
+                                    ? '2px solid #8a2be2'
+                                    : '1px solid rgba(255,255,255,0.1)',
+                                background: activeKeys.sound
+                                    ? 'rgba(138, 43, 226, 0.45)'
+                                    : 'rgba(255,255,255,0.04)',
+                                color: activeKeys.sound ? '#fff' : 'rgba(255,255,255,0.45)',
+                                boxShadow: activeKeys.sound
+                                    ? '0 0 24px rgba(138, 43, 226, 0.5), inset 0 0 12px rgba(138, 43, 226, 0.2)'
+                                    : 'none',
+                                transform: activeKeys.sound ? 'scale(0.97)' : 'scale(1)',
+                                transition: 'all 0.12s ease'
                             }}
                             onPointerDown={(e) => { e.preventDefault(); checkMatch('sound'); }}
                             onClick={(e) => { e.preventDefault(); checkMatch('sound'); }}
@@ -287,40 +310,21 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                     </div>
                 )}
 
-                {gameState === 'idle' && !isInception && (
-                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
-                        <button
-                            style={{
-                                ...styles.button,
-                                width: 'auto',
-                                padding: '8px 16px',
-                                fontSize: '12px',
-                                background: 'rgba(255,255,255,0.05)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
-                            onClick={() => dc.toggleFullTab && dc.toggleFullTab()}
-                        >
-                            <dc.Icon icon="maximize" size={14} />
-                            MAXIMIZE
-                        </button>
-                    </div>
-                )}
+
 
                 {gameState === 'summary' && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '400px', gap: '48px' }}>
-                        <div style={{ width: '100%', maxWidth: '550px' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', color: '#ffffff' }}>
+                        <div style={{ width: '100%', maxWidth: '550px', overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', color: '#ffffff', minWidth: '300px' }}>
                                 <thead>
                                     <tr>
-                                        <th style={{ padding: '20px' }}>
+                                        <th style={{ padding: 'clamp(10px, 3vw, 20px)' }}>
                                             <span className="iq-summary-icon" style={{ color: '#8a2be2' }}>
                                                 <dc.Icon icon="eye" />
                                             </span>
                                         </th>
-                                        <th style={{ padding: '20px' }}></th>
-                                        <th style={{ padding: '20px' }}>
+                                        <th style={{ padding: 'clamp(10px, 3vw, 20px)' }}></th>
+                                        <th style={{ padding: 'clamp(10px, 3vw, 20px)' }}>
                                             <span className="iq-summary-icon" style={{ color: '#8a2be2' }}>
                                                 <dc.Icon icon="volume-2" />
                                             </span>
@@ -328,19 +332,19 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                     </tr>
                                 </thead>
                                 <tbody style={{ textAlign: 'center' }}>
-                                    <tr style={{ fontSize: '1.2rem' }}>
+                                    <tr style={{ fontSize: 'clamp(1rem, 4vw, 1.2rem)' }}>
                                         <td style={{ padding: '12px' }}>{score.pos.hits}</td>
-                                        <td style={{ padding: '12px', fontWeight: '700', fontSize: '1.4rem', letterSpacing: '0.1em' }}>HITS</td>
+                                        <td style={{ padding: '12px', fontWeight: '700', fontSize: 'clamp(1.1rem, 5vw, 1.4rem)', letterSpacing: '0.1em' }}>HITS</td>
                                         <td style={{ padding: '12px' }}>{score.sound.hits}</td>
                                     </tr>
-                                    <tr style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.4)' }}>
+                                    <tr style={{ fontSize: 'clamp(1rem, 4vw, 1.2rem)', color: 'rgba(255,255,255,0.4)' }}>
                                         <td style={{ padding: '12px' }}>{score.pos.misses}</td>
-                                        <td style={{ padding: '12px', fontWeight: '700', fontSize: '1.4rem', letterSpacing: '0.1em' }}>MISSES</td>
+                                        <td style={{ padding: '12px', fontWeight: '700', fontSize: 'clamp(1.1rem, 5vw, 1.4rem)', letterSpacing: '0.1em' }}>MISSES</td>
                                         <td style={{ padding: '12px' }}>{score.sound.misses}</td>
                                     </tr>
-                                    <tr style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.2)' }}>
+                                    <tr style={{ fontSize: 'clamp(1rem, 4vw, 1.2rem)', color: 'rgba(255,255,255,0.2)' }}>
                                         <td style={{ padding: '12px' }}>{score.pos.falseAlarms}</td>
-                                        <td style={{ padding: '12px', fontWeight: '700', fontSize: '1.4rem', letterSpacing: '0.1em' }}>FALSE ALARMS</td>
+                                        <td style={{ padding: '12px', fontWeight: '700', fontSize: 'clamp(1.1rem, 5vw, 1.4rem)', letterSpacing: '0.1em' }}>FALSE ALARMS</td>
                                         <td style={{ padding: '12px' }}>{score.sound.falseAlarms}</td>
                                     </tr>
                                 </tbody>
@@ -349,7 +353,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
 
                         <div style={{ textAlign: 'center', position: 'relative' }}>
                             <div style={{
-                                fontSize: '4.5rem',
+                                fontSize: 'clamp(2.5rem, 12vw, 4.5rem)',
                                 fontWeight: '700',
                                 color: progression === 'up' ? '#00ff88' : progression === 'down' ? '#ff4d4d' : '#ffffff',
                                 lineHeight: '1',
@@ -359,9 +363,9 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                 N = {currentN}
                                 <div style={{
                                     position: 'absolute',
-                                    top: '-10px',
-                                    right: '-60px',
-                                    fontSize: '1rem',
+                                    top: '-15px',
+                                    right: '-50px',
+                                    fontSize: 'clamp(0.8rem, 3vw, 1rem)',
                                     fontWeight: '600',
                                     color: progression === 'up' ? '#00ff88' : progression === 'down' ? '#ff4d4d' : '#ffffff',
                                     whiteSpace: 'nowrap'
@@ -369,7 +373,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                     d' = {dPrime}%
                                 </div>
                             </div>
-                            <div style={{ ...styles.subtitle, marginTop: '12px', color: '#ffffff', fontSize: '1.1rem', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                            <div style={{ ...styles.subtitle, marginTop: '8px', color: '#ffffff', fontSize: 'clamp(0.9rem, 4vw, 1.1rem)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                                 {progression === 'up' ? 'LEVEL UP' : progression === 'down' ? 'LEVEL DOWN' : 'STAYING'}
                             </div>
                         </div>
@@ -386,24 +390,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                 )}
             </div>
 
-            {/* Full-tab Toggle */}
-            <div
-                onClick={onToggleFullTab}
-                style={{
-                    position: 'absolute',
-                    bottom: '20px',
-                    right: '20px',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    borderRadius: '2px',
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'rgba(255,255,255,0.2)',
-                    fontSize: '10px',
-                    letterSpacing: '0.1em'
-                }}
-            >
-                {isFullTab ? "MINIMIZE" : "MAXIMIZE"}
-            </div>
+
 
             {showTutorial && (
                 <TutorialOverlay
@@ -435,7 +422,7 @@ const LevelHistoryChart = ({ sessions, styles }) => {
     if (data.length === 0) return null;
 
     const width = 600;
-    const height = 200;
+    const height = clamp(150, 40 * maxN, 200);
     const padding = { top: 20, right: 20, bottom: 30, left: 40 };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
@@ -475,9 +462,9 @@ const LevelHistoryChart = ({ sessions, styles }) => {
     }
 
     return (
-        <div style={{ width: '100%', marginBottom: '32px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ ...styles.subtitle, marginBottom: '16px', fontSize: '14px', textAlign: 'center' }}>LEVEL HISTORY</h3>
-            <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+        <div style={{ width: '100%', marginBottom: '32px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '12px' }}>
+            <h3 style={{ ...styles.subtitle, marginBottom: '16px', fontSize: '13px', textAlign: 'center' }}>LEVEL HISTORY</h3>
+            <svg width="100%" height="auto" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible', width: '100%', display: 'block' }}>
                 <defs>
                     <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="rgba(0, 255, 255, 0.4)" />
@@ -534,19 +521,19 @@ const ReactionTimeChart = ({ sessions, styles }) => {
     const yMax = Math.max(...averages.map(a => Math.max(a.posAvg, a.soundAvg))) * 1.2 || 1000;
 
     return (
-        <div style={{ width: '100%', marginBottom: '32px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ ...styles.subtitle, marginBottom: '24px', fontSize: '14px', textAlign: 'center' }}>REACTION TIME (MS)</h3>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '10px' }}>
+        <div style={{ width: '100%', marginBottom: '32px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '12px' }}>
+            <h3 style={{ ...styles.subtitle, marginBottom: '24px', fontSize: '13px', textAlign: 'center' }}>REACTION TIME (MS)</h3>
+            <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <div style={{ width: '12px', height: '12px', background: '#9d50bb' }}></div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>Visual</div>
+                    <div style={{ width: '10px', height: '10px', background: '#9d50bb' }}></div>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Visual</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <div style={{ width: '12px', height: '12px', background: '#4dff88' }}></div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>Auditory</div>
+                    <div style={{ width: '10px', height: '10px', background: '#4dff88' }}></div>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Auditory</div>
                 </div>
             </div>
-            <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+            <svg width="100%" height="auto" viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible', width: '100%', display: 'block' }}>
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                     const y = padding.top + chartHeight - (chartHeight * ratio);
                     return (
@@ -584,11 +571,7 @@ const StatsOverlay = ({ styles, getStats, resetStats, folderPath, setShowStats, 
     const [confirmReset, setConfirmReset] = useState(false);
 
     const handleReset = async () => {
-        if (!confirmReset) {
-            setConfirmReset(true);
-            return;
-        }
-
+        if (!confirmReset) { setConfirmReset(true); return; }
         let resetFn = resetStats;
         if (typeof resetFn !== 'function' && folderPath) {
             try {
@@ -596,27 +579,17 @@ const StatsOverlay = ({ styles, getStats, resetStats, folderPath, setShowStats, 
                 if (utils && typeof utils.resetStats === 'function') resetFn = utils.resetStats;
             } catch (e) { console.error("Failed to load scoreManager dynamically", e); }
         }
-
         if (typeof resetFn === 'function') {
             try {
                 const empty = await resetFn();
-                if (empty) {
-                    setStats(empty);
-                    setConfirmReset(false);
-                }
-            } catch (e) { console.error("Reset failed with error:", e); }
+                if (empty) { setStats(empty); setConfirmReset(false); }
+            } catch (e) { console.error("Reset failed:", e); }
         }
     };
 
     useEffect(() => {
         if (typeof getStats === 'function') {
-            getStats().then(data => {
-                setStats(data);
-                setLoading(false);
-            }).catch(err => {
-                console.error("getStats failed:", err);
-                setLoading(false);
-            });
+            getStats().then(data => { setStats(data); setLoading(false); }).catch(err => { console.error("getStats failed:", err); setLoading(false); });
         } else { setLoading(false); }
     }, []);
 
@@ -631,58 +604,114 @@ const StatsOverlay = ({ styles, getStats, resetStats, folderPath, setShowStats, 
     const recentSessions = [...sessions].reverse().slice(0, 10);
 
     return (
-        <div style={styles.tutorialOverlay}>
-            <div style={{ ...styles.glassCard, width: '700px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-                <h2 style={{ ...styles.title, fontSize: '32px', marginBottom: '20px' }}>STATISTICS</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', width: '100%', marginBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '24px' }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={styles.statValue}>{overall.gamesPlayed}</div>
-                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>GAMES</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ ...styles.statValue, color: '#4dff88' }}>{overall.totalHits}</div>
-                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>HITS</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ ...styles.statValue, color: '#ff4d4d' }}>{overall.totalMisses}</div>
-                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>MISSES</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ ...styles.statValue, color: '#ffaa4d' }}>{overall.totalFalseAlarms}</div>
-                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>FA</div>
+        /* Full-screen backdrop */
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, width: '100%', height: '100%',
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            boxSizing: 'border-box',
+        }}>
+            {/* Modal card */}
+            <div style={{
+                width: '100%',
+                maxWidth: '640px',
+                maxHeight: '85vh',
+                background: 'rgba(8,8,8,0.98)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                boxShadow: '0 32px 80px rgba(0,0,0,0.8)',
+            }}>
+                {/* Fixed header */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '20px 24px',
+                    borderBottom: '1px solid rgba(255,255,255,0.07)',
+                    flexShrink: 0,
+                }}>
+                    <h2 style={{ margin: 0, fontSize: 'clamp(18px, 4vw, 24px)', fontWeight: '900', letterSpacing: '0.15em', color: '#fff', textTransform: 'uppercase' }}>STATISTICS</h2>
+                    <div
+                        onClick={() => setShowStats(false)}
+                        style={{ cursor: 'pointer', padding: '8px 20px', borderRadius: '50px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em', userSelect: 'none' }}
+                    >
+                        CLOSE
                     </div>
                 </div>
-                <ReactionTimeChart sessions={sessions} styles={styles} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
-                    <h3 style={{ ...styles.subtitle, margin: 0, textAlign: 'left' }}>SESSION HISTORY</h3>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => setHistoryView('graph')} style={{ ...styles.button, width: 'auto', padding: '6px 12px', fontSize: '12px', opacity: historyView === 'graph' ? 1 : 0.5, background: historyView === 'graph' ? 'rgba(138, 43, 226, 0.4)' : 'transparent', border: '1px solid rgba(138, 43, 226, 0.4)' }}>GRAPH</button>
-                        <button onClick={() => setHistoryView('list')} style={{ ...styles.button, width: 'auto', padding: '6px 12px', fontSize: '12px', opacity: historyView === 'list' ? 1 : 0.5, background: historyView === 'list' ? 'rgba(138, 43, 226, 0.4)' : 'transparent', border: '1px solid rgba(138, 43, 226, 0.4)' }}>LIST</button>
+
+                {/* Scrollable body */}
+                <div style={{ overflowY: 'auto', flex: 1, padding: '20px 24px', WebkitOverflowScrolling: 'touch' }}>
+                    {/* Overview stat cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', width: '100%', marginBottom: '24px' }}>
+                        {[
+                            { label: 'GAMES', value: overall.gamesPlayed, color: '#fff' },
+                            { label: 'HITS', value: overall.totalHits, color: '#4dff88' },
+                            { label: 'MISSES', value: overall.totalMisses, color: '#ff4d4d' },
+                            { label: 'FALSE ALARMS', value: overall.totalFalseAlarms, color: '#ffaa4d' },
+                        ].map(({ label, value, color }) => (
+                            <div key={label} style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '14px 4px' }}>
+                                <div style={{ fontSize: 'clamp(20px, 5vw, 28px)', fontWeight: '900', color }}>{value}</div>
+                                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px' }}>{label}</div>
+                            </div>
+                        ))}
                     </div>
+
+                    {/* Reaction time chart */}
+                    <ReactionTimeChart sessions={sessions} styles={styles} />
+
+                    {/* Session history toggle */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', marginTop: '8px' }}>
+                        <h3 style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: '700' }}>SESSION HISTORY</h3>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                            <button onClick={() => setHistoryView('graph')} style={{ ...styles.button, width: 'auto', padding: '4px 10px', fontSize: '11px', opacity: historyView === 'graph' ? 1 : 0.4, background: historyView === 'graph' ? 'rgba(138,43,226,0.4)' : 'transparent', border: '1px solid rgba(138,43,226,0.4)' }}>GRAPH</button>
+                            <button onClick={() => setHistoryView('list')} style={{ ...styles.button, width: 'auto', padding: '4px 10px', fontSize: '11px', opacity: historyView === 'list' ? 1 : 0.4, background: historyView === 'list' ? 'rgba(138,43,226,0.4)' : 'transparent', border: '1px solid rgba(138,43,226,0.4)' }}>LIST</button>
+                        </div>
+                    </div>
+
+                    {historyView === 'graph' ? (
+                        <div style={{ minHeight: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {sessions.length > 0 ? <LevelHistoryChart sessions={sessions} styles={styles} /> : <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px' }}>No sessions yet.</div>}
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {recentSessions.length === 0 && <div style={{ color: 'rgba(255,255,255,0.25)', textAlign: 'center', fontSize: '13px' }}>No sessions yet.</div>}
+                            {recentSessions.map((s, i) => {
+                                const date = new Date(s.timestamp).toLocaleDateString() + ' ' + new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                const accuracy = Math.round(((s.score.pos.hits + s.score.sound.hits) / Math.max(1, (s.score.pos.hits + s.score.pos.misses + s.score.sound.hits + s.score.sound.misses))) * 100);
+                                return (
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>{date}</div>
+                                        <div style={{ fontWeight: '700', fontSize: '13px' }}>N-{s.nLevel}</div>
+                                        <div style={{ color: accuracy > 80 ? '#4dff88' : '#fff', fontSize: '13px', fontWeight: '600' }}>{accuracy}% Acc</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
-                {historyView === 'graph' ? (
-                    <div style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {sessions.length > 0 ? <LevelHistoryChart sessions={sessions} styles={styles} /> : <div style={{ color: 'rgba(255,255,255,0.3)' }}>No games played yet.</div>}
+
+                {/* Fixed footer */}
+                <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                    <div
+                        onClick={handleReset}
+                        style={{
+                            cursor: 'pointer', padding: '10px 28px', borderRadius: '8px',
+                            background: confirmReset ? 'rgba(255,0,0,0.2)' : 'transparent',
+                            border: confirmReset ? '1px solid rgba(255,0,0,0.7)' : '1px solid rgba(255,77,77,0.2)',
+                            color: confirmReset ? '#ff4d4d' : 'rgba(255,77,77,0.4)',
+                            fontSize: '11px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase',
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        {confirmReset ? "SURE? CLICK TO WIPE ALL DATA" : "RESET ALL DATA"}
                     </div>
-                ) : (
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {recentSessions.length === 0 && <div style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>No games played yet.</div>}
-                        {recentSessions.map((s, i) => {
-                            const date = new Date(s.timestamp).toLocaleDateString() + ' ' + new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            const accuracy = Math.round(((s.score.pos.hits + s.score.sound.hits) / Math.max(1, (s.score.pos.hits + s.score.pos.misses + s.score.sound.hits + s.score.sound.misses))) * 100);
-                            return (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
-                                    <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>{date}</div>
-                                    <div style={{ fontWeight: 'bold' }}>N-{s.nLevel}</div>
-                                    <div style={{ color: accuracy > 80 ? '#4dff88' : '#ffffff' }}>{accuracy}% Acc</div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '32px' }}>
-                    <div onClick={() => setShowStats(false)} style={{ ...styles.button, width: 'auto' }}>CLOSE</div>
-                    <div onClick={handleReset} style={{ ...styles.button, width: 'auto', background: confirmReset ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 0, 0, 0.1)', border: confirmReset ? '1px solid rgba(255, 0, 0, 0.8)' : '1px solid rgba(255, 0, 0, 0.3)', color: confirmReset ? '#ff4d4d' : 'rgba(255, 77, 77, 0.6)' }}>{confirmReset ? "SURE? (CLICK TO WIPE)" : "RESET ALL DATA"}</div>
                 </div>
             </div>
         </div>
@@ -708,34 +737,99 @@ const TutorialOverlay = ({ styles, setShowTutorial, localDc }) => {
     const currentStep = steps[step];
 
     return (
-        <div style={styles.tutorialOverlay}>
-            <h2 style={{ ...styles.title, marginBottom: '40px' }}>HOW TO PLAY (N=2)</h2>
-            <div style={{ display: 'flex', gap: '40px', alignItems: 'center', marginBottom: '40px' }}>
-                <div style={{ position: 'relative', display: 'flex', gap: '20px' }}>
-                    {steps.map((s, i) => {
-                        const isCurrent = i === step;
-                        const opacity = isCurrent ? 1 : 0.3;
-                        return (
-                            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: opacity, transform: isCurrent ? 'scale(1.1)' : 'scale(1)', transition: 'all 0.3s ease' }}>
-                                <div style={{ width: '80px', height: '80px', border: `2px solid ${isCurrent ? '#fff' : 'rgba(255,255,255,0.2)'}`, background: isCurrent && s.match === 'pos' ? 'rgba(0, 255, 136, 0.2)' : 'transparent', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', padding: '4px', marginBottom: '10px', borderRadius: '8px' }}>
-                                    {[...Array(9)].map((_, idx) => <div key={idx} style={{ background: s.pos === idx ? '#fff' : 'rgba(255,255,255,0.1)', borderRadius: '2px' }} />)}
-                                </div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: isCurrent && s.match === 'sound' ? '#00ff88' : '#fff' }}>{s.char}</div>
-                                <div style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>{i === step ? 'CURRENT' : (i === (step - 2 + steps.length) % steps.length && step >= 2 ? 'N=2 AGO' : `T-${step - i}`)}</div>
+        <div style={{
+            ...styles.tutorialOverlay,
+            justifyContent: 'space-between',
+            overflow: 'hidden',
+            padding: 'min(5vh, 32px) 20px min(4vh, 24px)',
+        }}>
+            {/* Header */}
+            <h2 style={{
+                margin: 0,
+                fontSize: 'clamp(16px, 4vw, 22px)',
+                fontWeight: '900',
+                letterSpacing: '0.15em',
+                color: '#fff',
+                textAlign: 'center',
+                flexShrink: 0
+            }}>HOW TO PLAY</h2>
+
+            {/* Demo Grid */}
+            <div style={{ display: 'flex', gap: 'clamp(6px, 2vw, 16px)', justifyContent: 'center', alignItems: 'flex-end', flexShrink: 0, padding: '0 8px' }}>
+                {steps.map((s, i) => {
+                    const isCurrent = i === step;
+                    const isPrev = i === (step - 2 + steps.length) % steps.length && step >= 2;
+                    const opacity = isCurrent || isPrev ? 1 : 0.2;
+                    const gridSize = 'clamp(40px, 11vw, 60px)';
+                    return (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', opacity, transform: isCurrent ? 'scale(1.08)' : 'scale(1)', transition: 'all 0.3s ease' }}>
+                            <div style={{ width: gridSize, height: gridSize, border: `2px solid ${isCurrent ? '#fff' : isPrev ? '#00ff88' : 'rgba(255,255,255,0.15)'}`, background: isCurrent && s.match === 'pos' ? 'rgba(0,255,136,0.15)' : 'transparent', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', padding: '2px', borderRadius: '6px', marginBottom: '4px' }}>
+                                {[...Array(9)].map((_, idx) => <div key={idx} style={{ background: s.pos === idx ? '#fff' : 'rgba(255,255,255,0.08)', borderRadius: '1.5px' }} />)}
                             </div>
-                        );
-                    })}
-                    {step >= 2 && <div style={{ position: 'absolute', top: '-20px', left: `${((step - 2) * 100) + 40}px`, width: '200px', height: '40px', borderTop: '2px dashed #00ff88', borderLeft: '2px dashed #00ff88', borderRight: '2px dashed #00ff88', borderRadius: '20px 20px 0 0', opacity: currentStep.match ? 1 : 0.1 }} />}
+                            <div style={{ fontSize: 'clamp(12px, 3vw, 16px)', fontWeight: '700', color: isCurrent && s.match === 'sound' ? '#00ff88' : 'rgba(255,255,255,0.6)' }}>{s.char}</div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Status indicator */}
+            <div style={{ textAlign: 'center', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {currentStep.match === 'pos' ? (
+                    <div style={{ color: '#00ff88', fontWeight: '900', fontSize: 'clamp(15px, 4vw, 20px)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <dc.Icon icon="eye" style={{ width: '20px', height: '20px' }} /> SAME PLACE?
+                    </div>
+                ) : currentStep.match === 'sound' ? (
+                    <div style={{ color: '#00ff88', fontWeight: '900', fontSize: 'clamp(15px, 4vw, 20px)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <dc.Icon icon="volume-2" style={{ width: '20px', height: '20px' }} /> SAME SOUND?
+                    </div>
+                ) : (
+                    <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 'clamp(11px, 3vw, 14px)', letterSpacing: '0.2em', fontWeight: '700' }}>WATCH & LISTEN</div>
+                )}
+            </div>
+
+            {/* Controls Info */}
+            <div style={{
+                width: '100%',
+                maxWidth: '340px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                padding: 'clamp(10px, 2vh, 16px) 16px',
+                borderRadius: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                flexShrink: 0
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ background: 'rgba(138,43,226,0.25)', border: '1px solid #8a2be2', padding: '5px 10px', borderRadius: '5px', fontSize: '10px', fontWeight: '900', color: '#fff', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>TAP L</div>
+                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Match Position</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ background: 'rgba(138,43,226,0.25)', border: '1px solid #8a2be2', padding: '5px 10px', borderRadius: '5px', fontSize: '10px', fontWeight: '900', color: '#fff', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>TAP R</div>
+                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Match Sound</span>
                 </div>
             </div>
-            <div style={{ textAlign: 'center', color: '#fff', fontSize: '18px', lineHeight: '1.6', maxWidth: '600px', background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>
-                {currentStep.match === 'pos' && <div style={{ color: '#00ff88', fontWeight: 'bold', marginBottom: '10px' }}><dc.Icon icon="eye" style={{ display: 'inline', width: '20px', marginRight: '8px' }} />POSITION MATCH! (Same square as 2 steps ago)</div>}
-                {currentStep.match === 'sound' && <div style={{ color: '#00ff88', fontWeight: 'bold', marginBottom: '10px' }}><dc.Icon icon="volume-2" style={{ display: 'inline', width: '20px', marginRight: '8px' }} />SOUND MATCH! (Same letter as 2 steps ago)</div>}
-                {!currentStep.match && <div style={{ color: '#888' }}>Observe and Remember...</div>}
-                <div style={{ marginTop: '20px', fontSize: '14px', color: '#aaa' }}>Press <strong>POSITION</strong> or <strong>Key 'A'</strong> if the square matches.<br />Press <strong>AUDIO</strong> or <strong>Key ';'</strong> if the letter matches.</div>
+
+            {/* GOT IT Button */}
+            <div
+                onClick={() => setShowTutorial(false)}
+                style={{
+                    padding: '14px 48px',
+                    background: '#8a2be2',
+                    borderRadius: '50px',
+                    color: '#fff',
+                    fontSize: 'clamp(13px, 3.5vw, 16px)',
+                    fontWeight: '900',
+                    letterSpacing: '0.25em',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    boxShadow: '0 6px 20px rgba(138,43,226,0.45)',
+                    textTransform: 'uppercase',
+                    flexShrink: 0
+                }}
+            >
+                GOT IT!
             </div>
-            <div onClick={() => setShowTutorial(false)} style={{ ...styles.button, marginTop: '40px', width: 'auto' }}>GOT IT</div>
-            <a href="https://dual-n-back.io/" target="_blank" rel="noopener noreferrer" style={{ marginTop: '20px', color: 'rgba(255,255,255,0.3)', fontSize: '12px', textDecoration: 'none', borderBottom: '1px dotted rgba(255,255,255,0.3)', cursor: 'pointer' }}>Inspiration: dual-n-back.io</a>
         </div>
     );
 };

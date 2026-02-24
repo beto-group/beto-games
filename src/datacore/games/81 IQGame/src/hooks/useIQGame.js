@@ -292,7 +292,13 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
         }
     }, [gameState, calculateProgression]);
 
+    const lastTapRef = useRef({ pos: 0, sound: 0 });
+
     const checkMatch = useCallback((type) => {
+        const now = Date.now();
+        if (now - lastTapRef.current[type] < 150) return; // Debounce rapid taps
+        lastTapRef.current[type] = now;
+
         const idx = inputTrackingRef.current.currentIndex;
         if (gameState !== 'playing' || idx < currentN) {
             // Allow toggling even in buffer period? No, buffer has no matches.

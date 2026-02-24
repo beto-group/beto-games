@@ -885,12 +885,24 @@ function useRetroEngine(dc) {
     };
 
     // --- Global Leaderboard Logic ---
+    const safeFetch = async (url, options = {}, timeout = 5000) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+            const res = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return res;
+        } catch (e) {
+            clearTimeout(id);
+            throw e;
+        }
+    };
+
     const fetchGlobalLeaderboard = async () => {
         if (!ITCH_PUBLIC_KEY || !userGuid) return;
         setIsLoadingLeaderboard(true);
         try {
-            // SECURITY: No destructive endpoints (Delete/Update) are used. 
-            const res = await fetch(`${API_BASE}/get?key=${ITCH_PUBLIC_KEY}`);
+            const res = await safeFetch(`${API_BASE}/get?key=${ITCH_PUBLIC_KEY}`);
             if (res.ok) {
                 setIsServerOffline(false);
                 const data = await res.json();
@@ -900,7 +912,6 @@ function useRetroEngine(dc) {
                     setTotalGames(entries.length);
                     const guids = entries.map(e => e.UserGuid || e.userGuid).filter(Boolean);
                     const uniqueGuids = new Set(guids.map(g => g.split('-')[0]));
-                    // Fallback to unique names if no GUIDs (legacy data)
                     if (uniqueGuids.size === 0) {
                         const names = entries.map(e => e.Username || e.username).filter(Boolean);
                         setTotalPlayers(new Set(names).size);
@@ -929,9 +940,15 @@ function useRetroEngine(dc) {
                 }
             } else {
                 console.warn(`Leaderboard fetch rejected: ${res.status}`);
+                if (res.status >= 500) setIsServerOffline(true);
             }
         } catch (e) {
-            console.error("Leaderboard Sync Failed", e);
+            // Standardizing the "Failed to Fetch" error to avoid console noise
+            if (e.name === 'AbortError') {
+                console.warn("Leaderboard fetch timed out.");
+            } else {
+                console.warn("Leaderboard Sync Offline (Standard Expected Behavior)");
+            }
             setIsServerOffline(true);
         } finally {
             setIsLoadingLeaderboard(false);
@@ -955,10 +972,16 @@ function useRetroEngine(dc) {
             formData.append('userGuid', userGuidRef.current + "-" + (s.ts || Date.now()));
 
             try {
-                const res = await fetch(`${API_BASE}/entry/upload`, { method: 'POST', body: formData });
+                const res = await safeFetch(`${API_BASE}/entry/upload`, { method: 'POST', body: formData });
                 if (res.ok) successCount++;
-                else break;
-            } catch (e) { break; }
+                else {
+                    if (res.status >= 500) setIsServerOffline(true);
+                    break;
+                }
+            } catch (e) {
+                setIsServerOffline(true);
+                break;
+            }
         }
 
         if (successCount > 0) {
@@ -972,7 +995,7 @@ function useRetroEngine(dc) {
     const initializeGuid = async () => {
         if (userGuid) return userGuid;
         try {
-            const res = await fetch(`${API_BASE}/authorize`);
+            const res = await safeFetch(`${API_BASE}/authorize`);
             if (res.ok) {
                 const guid = await res.text();
                 const trimmedGuid = guid.trim();
@@ -981,7 +1004,10 @@ function useRetroEngine(dc) {
                 console.log("V3 Identity Authorized");
                 return trimmedGuid;
             }
-        } catch (e) { console.error("V3 Auth Failed", e); }
+        } catch (e) {
+            console.warn("V3 Auth Offline (Expected Behavior)");
+            setIsServerOffline(true);
+        }
         return null;
     };
 
@@ -1034,7 +1060,7 @@ function useRetroEngine(dc) {
         console.log(`📡 Committing Score: ${name} -> ${scValue}`);
 
         try {
-            const res = await fetch(`${API_BASE}/entry/upload`, {
+            const res = await safeFetch(`${API_BASE}/entry/upload`, {
                 method: 'POST',
                 body: formData
             });
@@ -1048,7 +1074,7 @@ function useRetroEngine(dc) {
                 throw new Error(`Server Error: ${res.status}`);
             }
         } catch (e) {
-            console.error("🌐 Offline? Queueing Score for later sync:", e);
+            console.warn("🌐 Offline? Queueing Score for later sync.");
             setIsServerOffline(true);
             const newPending = [...pendingScoresRef.current, { name: name.trim(), score: scValue, ts: Date.now() }];
             setPendingScores(newPending);

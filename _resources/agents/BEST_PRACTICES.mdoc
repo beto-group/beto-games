@@ -336,3 +336,161 @@ Keystatic requires dynamic API routes to function, which are incompatible with `
 - **Production**: The `/admin` route and `/api/admin` endpoints should be static placeholders (or 404s) in the
 production build.
 - **GitHub Sync**: Push content changes to GitHub to trigger a new Cloudflare deployment.
+## 14. Favicon Auto-Generation System
+
+### How It Works
+`scripts/generate-favicons.js` reads `public/logo.png` and automatically generates all browser-required favicon
+variants using `sharp` (already available in the project). It runs automatically as part of `npm run shim`
+(which runs on every `npm run dev` and `npm run build`).
+
+Run manually: `npm run favicons`
+
+**Generated Files** (all in `public/`):
+
+| File | Size | Purpose |
+|------|------|---------|
+| `favicon.ico` | 32x32 PNG-in-ICO | Legacy browsers, search crawlers |
+| `favicon-16x16.png` | 16x16 | Browser tab small |
+| `favicon-32x32.png` | 32x32 | Browser tab retina |
+| `icon.png` | 32x32 | Next.js metadata API |
+| `apple-touch-icon.png` | 180x180 | iOS "Add to Home Screen" |
+| `icon-192.png` | 192x192 | Android PWA |
+| `icon-512.png` | 512x512 | Android PWA splash |
+
+Also auto-updates `manifest.json` with correct icon entries.
+
+### How to Change the Logo
+1. Replace `public/logo.png` with your new logo.
+2. Run `npm run dev` — all sizes regenerate automatically.
+3. Hard-reload the browser (`Cmd+Shift+R`) to clear the favicon cache.
+
+### Important: Delete Stale Files
+Browsers auto-discover any `favicon.png` found in `/public`, even if you've moved to `favicon.ico`. Delete
+stale favicon variants not part of the generator's output set.
+
+### layout.jsx Metadata Format
+```javascript
+icons: {
+    icon: [
+        { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+        { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    other: [
+        { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+},
+```
+
+## 15. Scroll Elimination for Embedded Full-Screen Games
+
+When a game component is embedded in a scrollable Next.js page, `overflow: hidden` on the game div is NOT
+enough — the page body itself can still scroll. Two-part fix required:
+
+**1. `position: fixed` on the container** (takes game out of document flow entirely):
+```javascript
+container: {
+    position: 'fixed', top: 0, left: 0,
+    width: '100vw',
+    height: '100dvh',   // dvh = dynamic viewport height, accounts for mobile browser chrome
+    overflow: 'hidden',
+    zIndex: 100,        // Sits above the website navbar
+}
+```
+
+**2. Body scroll-lock via `<style>` tag** (prevents iOS touch/momentum scroll):
+```jsx
+<style>{`
+    body, html { overflow: hidden !important; overscroll-behavior: none !important; }
+`}</style>
+```
+
+**Key rules**:
+- Use `100dvh` not `100vh` or `100svh` — adapts when mobile browser chrome shows/hides.
+- `minHeight` will NOT work — always use `height` for scroll elimination.
+- Without the body lock, iOS Safari momentum scroll can still scroll the page behind the fixed game.
+
+## 16. PWA "Add to Home Screen" / Mobile Install Flow
+
+### Overview
+Components can self-manage the PWA install (Add to Home Screen) experience without threading props
+through the entire WebsiteBuilder chain. The pattern below works in both Datacore and Web.
+
+### Required Files
+| File | Purpose |
+|------|---------|
+| `public/sw.js` | Service worker — required for Android Chrome to offer install |
+| `src/hooks/usePWAInstall.jsx` | Standalone hook for reuse |
+| `public/manifest.json` | Must have `display: "standalone"` and icon entries |
+
+### Self-Contained Component Pattern (HeroSection.jsx)
+Use `_useState`/`_useEffect` (underscore-prefixed) to avoid shadowing the React imports
+that the build-shim injects at the top of generated files:
+
+```javascript
+function HeroSection({ STYLES, buttonText, dc }) {
+    const localDc = dc || (typeof window !== 'undefined' ? window.dc : null);
+    // _useState/_useEffect avoids shadowing React imports injected by build-shim
+    const _useState = (typeof useState !== 'undefined' ? useState : null) || localDc?.useState;
+    const _useEffect = (typeof useEffect !== 'undefined' ? useEffect : null) || localDc?.useEffect;
+
+    const [deferredPrompt, setDeferredPrompt] = _useState(null);
+    const [canInstall, setCanInstall] = _useState(false);
+    const [isIOS, setIsIOS] = _useState(false);
+    const [isInstalled, setIsInstalled] = _useState(false);
+
+    _useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        setIsIOS(ios);
+        const standalone = window.matchMedia('(display-mode: standalone)').matches
+            || window.navigator.standalone === true;
+        setIsInstalled(standalone);
+        if (standalone || ios) { if (ios) setCanInstall(true); return; }
+
+        const onPrompt = (e) => { e.preventDefault(); setDeferredPrompt(e); setCanInstall(true); };
+        window.addEventListener('beforeinstallprompt', onPrompt);
+        window.addEventListener('appinstalled', () => { setIsInstalled(true); setCanInstall(false); });
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+        return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+    }, []);
+
+    const handleInstall = async () => {
+        if (isIOS) { /* show modal with Share → Add to Home Screen instructions */ return; }
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        setDeferredPrompt(null);
+    };
+}
+```
+
+### Platform Behavior
+| Platform | Trigger | What Happens |
+|---|---|---|
+| Android Chrome | `beforeinstallprompt` event | Native Chrome install banner |
+| iOS Safari | Always available (no event) | Show manual Share → "Add to Home Screen" modal |
+| Already installed | `display-mode: standalone` | Button disabled / shows "✓ INSTALLED" |
+| Desktop | No `beforeinstallprompt` | Show default button text |
+
+### Button Label Pattern
+```javascript
+const installLabel = isInstalled ? '✓ INSTALLED'
+    : isIOS ? '⊕ ADD TO HOME SCREEN'
+    : canInstall ? '⊕ INSTALL APP'
+    : defaultButtonText;
+```
+
+### iOS Instructions Modal
+iOS does NOT support `beforeinstallprompt`. Show a bottom-sheet modal with:
+- Instruction to tap the Share button (⎋) in Safari
+- Then tap "Add to Home Screen"
+- Positioned `position: fixed; bottom: 40px` with an animated arrow pointing down
+
+### Important Notes
+- Android `beforeinstallprompt` only fires over **HTTPS** (works on localhost for dev)
+- The service worker (`sw.js`) must be at the root `/sw.js` — not a subdirectory
+- `manifest.json` must have `"display": "standalone"` for the OS to recognize it as installable
+- iOS standalone detection: `window.navigator.standalone === true` (not matchMedia)

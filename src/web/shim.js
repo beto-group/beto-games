@@ -87,7 +87,8 @@ if (typeof window !== 'undefined') {
             return {};
         },
         // Simple Icon Shim for Web
-        Icon: ({ icon, className = "", style = {} }) => {
+        Icon: ({ icon, className = "", size, style = {} }) => {
+            const sz = size || 24;
             const icons = {
                 'zap': (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -106,7 +107,50 @@ if (typeof window !== 'undefined') {
                         <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                         <line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
-                )
+                ),
+                'eye': (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                ),
+                'volume-2': (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    </svg>
+                ),
+                'bar-chart-2': (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10" />
+                        <line x1="12" y1="20" x2="12" y2="4" />
+                        <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                ),
+                'x': (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                ),
+                'chevron-left': (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                ),
+                'chevron-right': (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                ),
+                'refresh-cw': (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                ),
             };
 
             const svgContent = icons[icon];
@@ -118,20 +162,21 @@ if (typeof window !== 'undefined') {
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '1em',
-                        height: '1em',
+                        width: sz ? `${sz}px` : '1em',
+                        height: sz ? `${sz}px` : '1em',
+                        flexShrink: 0,
                         ...style
                     }}
                     title={icon}
                 >
-                    {svgContent || (
+                    {svgContent ? React.cloneElement(svgContent, { width: sz || '1em', height: sz || '1em' }) : (
                         <span style={{
                             fontSize: '0.8em',
                             border: '1px solid currentColor',
                             borderRadius: '4px',
                             padding: '2px',
                             opacity: 0.7
-                        }}>ⓘ</span>
+                        }}>?{icon}</span>
                     )}
                 </span>
             );

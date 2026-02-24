@@ -291,7 +291,7 @@ function WebsiteBuilder(props) {
 
         return (
             <div style={{
-                height: '100vh',
+                height: '100dvh',
                 width: '100vw',
                 position: 'fixed',
                 top: 0,
@@ -365,7 +365,7 @@ function WebsiteBuilder(props) {
     if (indexContent === null) return <LoadingPage text="Loading Orchestrator" />;
 
     return (
-        <div style={{ ...STYLES.container, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ ...STYLES.container, height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: 'env(safe-area-inset-bottom)' }}>
             {VersionLogger && <VersionLogger useEffect={useEffect} STYLES={STYLES} />}
 
             {Navbar ? (

@@ -496,3 +496,153 @@ without `const`) or failed to resolve `.js` extensions to `.generated.jsx`.
             - **Disable Admin APIs**: For Keystatic on Cloudflare Pages, you cannot run the API routes. Replace the
             admin API handlers with static 404s or dummy responses, and force content editing to happen locally (`npm
             run dev`).
+
+            ---
+
+            ## 15. dc.Icon Fallback (ⓘ) on Web — Missing Icons in Shim
+
+            ### 🟡 Icons Show as Placeholder `ⓘ` on Web (Not in Datacore)
+            **Symptoms**: Game or component icons (e.g., eye, volume-2, bar-chart-2, x) render as a small boxed `ⓘ`
+            character on the website, but display correctly in Datacore/Obsidian.
+            **Cause**: `dc.Icon` is a native Datacore API component that renders Lucide icons. On the web, `shim.js`
+            provides a fallback `Icon` component with a local SVG dictionary. If the requested icon name is not in that
+            dictionary, it falls back to the placeholder.
+
+            **Solution**: Add the missing icon's Lucide SVG path to the `icons` dictionary in `src/web/shim.js`:
+            ```javascript
+            // src/web/shim.js — Inside the icons dictionary
+            'eye': (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+            </svg>
+            ),
+            'volume-2': (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+            ),
+            // ... etc. Copy SVG path from lucide.dev for the icon name.
+            ```
+
+            **Currently Registered Icons** (as of 2026-02):
+            `zap`, `rotate-ccw`, `help-circle`, `eye`, `volume-2`, `bar-chart-2`, `x`, `chevron-left`,
+            `chevron-right`, `refresh-cw`
+
+            **Rule**: Whenever a new component uses a new `dc.Icon` icon name, add its SVG to `shim.js`. After
+            editing `shim.js`, run `npm run shim` to regenerate `shim.generated.jsx`.
+
+            **Also**: The `Icon` shim now accepts a `size` prop (numeric pixels) which is passed through to the
+            SVG's `width` and `height` attributes, matching the Datacore `dc.Icon` API.
+
+            ---
+
+            ## 16. Favicon Shows Old/Wrong Icon After Generation
+
+            ### 🟡 Browser Tab Shows Stale Favicon After Running generate-favicons
+            **Symptoms**: `npm run dev` regenerates favicons from `public/logo.png`, but the browser tab still
+            shows the old icon.
+            **Cause**: Browsers aggressively cache favicons. A hard reload is required to force the browser to
+            re-fetch.
+            **Solution**:
+            - `Cmd + Shift + R` (Mac) / `Ctrl + Shift + R` (Windows) for a hard reload.
+            - If that doesn't work: DevTools → Network tab → check "Disable cache" → reload.
+
+            **Also Check**: If there is a stale `public/favicon.png` (different from `favicon.ico` /
+            `favicon-32x32.png`),
+            browsers may auto-discover and prefer it. Delete any stale favicon variants from /public that are not
+            part of the `generate-favicons.js` output set.
+
+            ---
+
+            ## 17. Embedded Game Scroll Issues (Mobile + Desktop)
+
+            ### 🟡 Unwanted Vertical Scrollbar Appears Inside Game Components
+            **Symptoms**: The IQGame (or other full-screen game embedded in the Next.js website) triggers a vertical
+            scrollbar on mobile or desktop. Tweaking padding/margin doesn't help reliably.
+            **Root Cause**: The game component is rendered *inside a scrollable webpage*. Setting `overflow: hidden`
+            on the game's root div is not enough because the *page* itself can scroll.
+
+            **Two-Part Solution**:
+
+            **1. Make the game container `position: fixed`** (owns the viewport entirely):
+            ```javascript
+            // styles.jsx
+            container: {
+            position: 'fixed', // Owns the entire viewport
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100dvh', // dvh = dynamic viewport height (mobile-safe)
+            overflow: 'hidden',
+            zIndex: 100, // Sits above the website navbar
+            // ... other styles
+            }
+            ```
+
+            **2. Inject body scroll-lock CSS** via a `<style>
+                ` tag inside the component: ```jsx // IQGame.jsx (or any full-screen game)
+
+                <style> {
+
+                    ` body,
+                    html {
+                        overflow: hidden !important;
+                        overscroll-behavior: none !important;
+                    }
+
+                    `
+                }
+            </style>
+            ```
+
+            **Why this works**:
+            - `position: fixed` takes the game out of the document flow entirely — the page can't scroll because
+            the game visually covers it, and there's no layout above/below to scroll to.
+            - The body lock is a safety net for touch/momentum scroll on iOS.
+            - `100dvh` (dynamic viewport height) correctly accounts for the mobile browser's address bar being
+            shown/hidden — use this instead of `100vh` or `100svh` for games.
+
+            **Note**: Using `minHeight` instead of `height` on the container will still allow scrolling if content
+            overflows. Always use `height: 100dvh` + `overflow: hidden` for true scroll elimination.
+            ---
+
+            ## 18. PWA Install Button Does Nothing on Mobile
+
+            ### 🟡 "Add to Home Screen" Button Triggers But Nothing Downloads/Installs
+            **Symptoms**: The hero button is tapped on mobile but nothing happens — no install prompt appears,
+            no download occurs.
+            **Root Cause (most common)**: The button has no `onClick` handler, OR the `beforeinstallprompt`
+            event was never captured because there is no service worker registered.
+
+            **PWA Install requires ALL THREE of these**:
+            1. A valid `manifest.json` with `"display": "standalone"`, `name`, and icon entries
+            2. A **Service Worker** registered at `/sw.js` (served from root)
+            3. HTTPS (localhost is fine for dev; production requires it)
+
+            **Implementation**: See `BEST_PRACTICES.md § 16` for the complete self-contained component pattern.
+
+            **Platform-specific issues**:
+            | Platform | Issue | Fix |
+            |---|---|---|
+            | Android Chrome | `beforeinstallprompt` never fires | Ensure service worker is registered and manifest is valid |
+            | iOS Safari | Event never fires (not supported) | Show manual instructions modal (Share → Add to Home Screen) |
+            | Desktop | Event may not fire | Expected — show default CTA text |
+
+            **Debugging beforeinstallprompt on Android**:
+            In Chrome DevTools → Application tab → Manifest → check for install criteria errors.
+            Common errors: missing icons, missing `start_url`, or not HTTPS.
+
+            **iOS standalone detection**:
+            ```javascript
+            // WRONG: matchMedia alone doesn't detect iOS standalone
+            window.matchMedia('(display-mode: standalone)').matches
+
+            // CORRECT: Check both
+            const isInstalled = window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;  // iOS Safari specific
+            ```

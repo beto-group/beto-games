@@ -7,7 +7,7 @@ async function View({ STYLES, dc, GameCard, folderPath, setCurrentPage: factoryS
         const setCurrentPage = factorySetCurrentPage || componentProps?.setCurrentPage;
 
         return (
-            <div style={{ width: '100%', padding: '0 40px' }}>
+            <div style={{ width: '100%', padding: '0 clamp(20px, 5vw, 40px)' }}>
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',

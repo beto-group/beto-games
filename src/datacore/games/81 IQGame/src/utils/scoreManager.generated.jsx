@@ -4,17 +4,23 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 
 const SAVE_FILE_PATH = ".datacore/game/duel-n-back/stats.json";
-// Updated to force cache refresh
+const LS_KEY = "iq-game-stats";
+
+const DEFAULT_STATS = () => ({
+    overall: { gamesPlayed: 0, totalHits: 0, totalMisses: 0, totalFalseAlarms: 0 },
+    sessions: []
+});
 
 /**
- * Checks if the Datacore adapter is available.
+ * Checks if the Obsidian vault adapter is fully available (not just truthy, but has required methods).
  */
 function isAdapterAvailable() {
-    return dc?.app?.vault?.adapter;
+    const adapter = dc?.app?.vault?.adapter;
+    return adapter && typeof adapter.exists === 'function' && typeof adapter.read === 'function';
 }
 
 /**
- * Ensures the directory exists.
+ * Ensures the directory exists (Obsidian-only).
  */
 async function ensureDirectory() {
     if (!isAdapterAvailable()) return;
@@ -25,30 +31,28 @@ async function ensureDirectory() {
 }
 
 /**
- * Loads the current stats from the file.
- * Returns default structure if file not found or error.
+ * Loads current stats. Uses Obsidian vault if available, else localStorage.
  */
 async function getStats() {
-    if (!isAdapterAvailable()) return { overall: { gamesPlayed: 0, totalHits: 0, totalMisses: 0, totalFalseAlarms: 0 }, sessions: [] };
-
-    try {
-        if (await dc.app.vault.adapter.exists(SAVE_FILE_PATH)) {
-            const content = await dc.app.vault.adapter.read(SAVE_FILE_PATH);
-            return JSON.parse(content);
+    if (isAdapterAvailable()) {
+        try {
+            if (await dc.app.vault.adapter.exists(SAVE_FILE_PATH)) {
+                const content = await dc.app.vault.adapter.read(SAVE_FILE_PATH);
+                return JSON.parse(content);
+            }
+        } catch (e) {
+            console.error("IQGame: Failed to load stats from vault", e);
         }
-    } catch (e) {
-        console.error("IQGame: Failed to load stats", e);
+    } else {
+        // Web/Next.js fallback: use localStorage
+        try {
+            const raw = localStorage.getItem(LS_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {
+            console.error("IQGame: Failed to load stats from localStorage", e);
+        }
     }
-
-    return {
-        overall: {
-            gamesPlayed: 0,
-            totalHits: 0,
-            totalMisses: 0,
-            totalFalseAlarms: 0
-        },
-        sessions: []
-    };
+    return DEFAULT_STATS();
 }
 
 /**
@@ -56,56 +60,56 @@ async function getStats() {
  * @param {Object} sessionData - { nLevel, score: { pos, sound }, timestamp }
  */
 async function saveSession(sessionData) {
-    console.log("scoreManager: saveSession called with:", sessionData);
-    if (!isAdapterAvailable()) {
-        console.warn("IQGame: persistence not available.");
-        return;
-    }
-
-    await ensureDirectory();
     const stats = await getStats();
 
-    // specific session data
     const newSession = {
         timestamp: sessionData.timestamp || Date.now(),
         nLevel: sessionData.nLevel,
         score: sessionData.score
     };
     stats.sessions.push(newSession);
-
-    // Update overall
     stats.overall.gamesPlayed++;
 
-    // Aggregate scores
     const { pos, sound } = sessionData.score;
     stats.overall.totalHits += (pos.hits + sound.hits);
     stats.overall.totalMisses += (pos.misses + sound.misses);
     stats.overall.totalFalseAlarms += (pos.falseAlarms + sound.falseAlarms);
 
-    try {
-        await dc.app.vault.adapter.write(SAVE_FILE_PATH, JSON.stringify(stats, null, 2));
-        console.log("IQGame: Session saved.");
-    } catch (error) {
-        console.error("IQGame: Failed to save session", error);
+    if (isAdapterAvailable()) {
+        try {
+            await ensureDirectory();
+            await dc.app.vault.adapter.write(SAVE_FILE_PATH, JSON.stringify(stats, null, 2));
+        } catch (error) {
+            console.error("IQGame: Failed to save to vault", error);
+        }
+    } else {
+        try {
+            localStorage.setItem(LS_KEY, JSON.stringify(stats));
+        } catch (error) {
+            console.error("IQGame: Failed to save to localStorage", error);
+        }
     }
 }
 
 async function resetStats() {
-    if (!isAdapterAvailable()) return;
+    const emptyStats = DEFAULT_STATS();
 
-    const emptyStats = {
-        overall: { gamesPlayed: 0, totalHits: 0, totalMisses: 0, totalFalseAlarms: 0 },
-        sessions: []
-    };
-
-    try {
-        await dc.app.vault.adapter.write(SAVE_FILE_PATH, JSON.stringify(emptyStats, null, 2));
-        console.log("IQGame: Stats reset.");
-        return emptyStats;
-    } catch (error) {
-        console.error("IQGame: Failed to reset stats", error);
-        return null;
+    if (isAdapterAvailable()) {
+        try {
+            await dc.app.vault.adapter.write(SAVE_FILE_PATH, JSON.stringify(emptyStats, null, 2));
+        } catch (error) {
+            console.error("IQGame: Failed to reset in vault", error);
+            return null;
+        }
+    } else {
+        try {
+            localStorage.setItem(LS_KEY, JSON.stringify(emptyStats));
+        } catch (error) {
+            console.error("IQGame: Failed to reset in localStorage", error);
+            return null;
+        }
     }
+    return emptyStats;
 }
 
 export {  saveSession, getStats, resetStats  };

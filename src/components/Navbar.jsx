@@ -157,9 +157,10 @@ function Navbar({ currentPage, setCurrentPage, STYLES, navItems = [], AnimatedLo
             <div style={{
                 position: 'fixed',
                 inset: 0,
-                zIndex: 60,
+                zIndex: 9998, // Just below sticky header (9999)
                 paddingTop: '128px',
-                backgroundColor: '#09090b', // zinc-950
+                backgroundColor: 'rgba(9, 9, 11, 0.7)', // Semi-transparent zinc-950
+                backdropFilter: 'blur(20px)', // Frosted glass effect
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'flex-start',
