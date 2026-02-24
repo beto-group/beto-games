@@ -68,7 +68,38 @@ export default function RootLayout({ children }) {
                     button { font-family: inherit; }
                 `}</style>
             </head>
-            <body>{children}</body>
+            <body>
+                {/* 
+                  * PWA Early Capture Script
+                  * Runs synchronously BEFORE React mounts — captures beforeinstallprompt
+                  * which fires very early (often before components mount).
+                  * Stores on window.__pwaInstallPrompt so HeroSection can read it immediately.
+                  * Also dispatches 'pwa-install-ready' for components that mount after the event.
+                */}
+                <script dangerouslySetInnerHTML={{
+                    __html: `
+                    (function() {
+                        // Register service worker immediately
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.register('/sw.js').catch(function() {});
+                        }
+                        // Capture beforeinstallprompt before React mounts
+                        window.addEventListener('beforeinstallprompt', function(e) {
+                            e.preventDefault();
+                            window.__pwaInstallPrompt = e;
+                            // Dispatch custom event for late-mounting components
+                            window.dispatchEvent(new CustomEvent('pwa-install-ready', { detail: e }));
+                        });
+                        // Track installed state
+                        window.addEventListener('appinstalled', function() {
+                            window.__pwaInstalled = true;
+                            window.__pwaInstallPrompt = null;
+                            window.dispatchEvent(new CustomEvent('pwa-installed'));
+                        });
+                    })();
+                ` }} />
+                {children}
+            </body>
         </html>
     )
 }

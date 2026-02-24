@@ -371,16 +371,16 @@ stale favicon variants not part of the generator's output set.
 ### layout.jsx Metadata Format
 ```javascript
 icons: {
-    icon: [
-        { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-        { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    shortcut: '/favicon.ico',
-    apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-    other: [
-        { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-        { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-    ],
+icon: [
+{ url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+],
+shortcut: '/favicon.ico',
+apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+other: [
+{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+{ url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+],
 },
 ```
 
@@ -392,19 +392,26 @@ enough — the page body itself can still scroll. Two-part fix required:
 **1. `position: fixed` on the container** (takes game out of document flow entirely):
 ```javascript
 container: {
-    position: 'fixed', top: 0, left: 0,
-    width: '100vw',
-    height: '100dvh',   // dvh = dynamic viewport height, accounts for mobile browser chrome
-    overflow: 'hidden',
-    zIndex: 100,        // Sits above the website navbar
+position: 'fixed', top: 0, left: 0,
+width: '100vw',
+height: '100dvh', // dvh = dynamic viewport height, accounts for mobile browser chrome
+overflow: 'hidden',
+zIndex: 100, // Sits above the website navbar
 }
 ```
 
-**2. Body scroll-lock via `<style>` tag** (prevents iOS touch/momentum scroll):
-```jsx
-<style>{`
-    body, html { overflow: hidden !important; overscroll-behavior: none !important; }
-`}</style>
+**2. Body scroll-lock via `<style>
+  ` tag** (prevents iOS touch/momentum scroll): ```jsx <style> {
+
+    ` body,
+    html {
+      overflow: hidden !important;
+      overscroll-behavior: none !important;
+    }
+
+    `
+  }
+</style>
 ```
 
 **Key rules**:
@@ -416,72 +423,91 @@ container: {
 
 ### Overview
 Components can self-manage the PWA install (Add to Home Screen) experience without threading props
-through the entire WebsiteBuilder chain. The pattern below works in both Datacore and Web.
+through the entire WebsiteBuilder chain. To avoid the "Slow Button" problem where the prompt event
+fires before React hydrates, use the **Early Capture Pattern**.
 
 ### Required Files
 | File | Purpose |
 |------|---------|
 | `public/sw.js` | Service worker — required for Android Chrome to offer install |
+| `src/app/layout.jsx` | Contains the Early Capture inline script |
 | `src/hooks/usePWAInstall.jsx` | Standalone hook for reuse |
 | `public/manifest.json` | Must have `display: "standalone"` and icon entries |
 
-### Self-Contained Component Pattern (HeroSection.jsx)
-Use `_useState`/`_useEffect` (underscore-prefixed) to avoid shadowing the React imports
-that the build-shim injects at the top of generated files:
+### The Early Capture Pattern (layout.jsx)
+Add a synchronous `
+<script>` in the ` < body > ` of `layout.jsx` to capture the event before React mounts:
 
 ```javascript
-function HeroSection({ STYLES, buttonText, dc }) {
+    // src/app/layout.jsx
+    < script dangerouslySetInnerHTML = {{
+      __html: `
+    (function() {
+        // Register sw immediately
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(function() {});
+        }
+        // Capture event before React mounts
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            window.__pwaInstallPrompt = e;
+            window.dispatchEvent(new CustomEvent('pwa-install-ready', { detail: e }));
+        });
+        window.addEventListener('appinstalled', function() {
+            window.__pwaInstalled = true;
+            window.dispatchEvent(new CustomEvent('pwa-installed'));
+        });
+    })();
+` }} />
+    ```
+
+### Self-Contained Component Pattern (HeroSection.jsx)
+Check for the captured prompt immediately on mount for a "Zero-Delay" UI:
+
+```javascript
+  function HeroSection({ STYLES, buttonText, dc }) {
     const localDc = dc || (typeof window !== 'undefined' ? window.dc : null);
-    // _useState/_useEffect avoids shadowing React imports injected by build-shim
     const _useState = (typeof useState !== 'undefined' ? useState : null) || localDc?.useState;
     const _useEffect = (typeof useEffect !== 'undefined' ? useEffect : null) || localDc?.useEffect;
 
     const [deferredPrompt, setDeferredPrompt] = _useState(null);
     const [canInstall, setCanInstall] = _useState(false);
-    const [isIOS, setIsIOS] = _useState(false);
-    const [isInstalled, setIsInstalled] = _useState(false);
 
     _useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        setIsIOS(ios);
-        const standalone = window.matchMedia('(display-mode: standalone)').matches
-            || window.navigator.standalone === true;
-        setIsInstalled(standalone);
-        if (standalone || ios) { if (ios) setCanInstall(true); return; }
+      if (typeof window === 'undefined') return;
 
-        const onPrompt = (e) => { e.preventDefault(); setDeferredPrompt(e); setCanInstall(true); };
-        window.addEventListener('beforeinstallprompt', onPrompt);
-        window.addEventListener('appinstalled', () => { setIsInstalled(true); setCanInstall(false); });
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-        return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+      // ⚡ FAST PATH: prompt was already captured by layout.jsx
+      if (window.__pwaInstallPrompt) {
+        setDeferredPrompt(window.__pwaInstallPrompt);
+        setCanInstall(true);
+      }
+
+      // FALLBACK: listen for the custom ready event
+      const onReady = (e) => {
+        setDeferredPrompt(e.detail || window.__pwaInstallPrompt);
+        setCanInstall(true);
+      };
+      window.addEventListener('pwa-install-ready', onReady);
+      return () => window.removeEventListener('pwa-install-ready', onReady);
     }, []);
-
-    const handleInstall = async () => {
-        if (isIOS) { /* show modal with Share → Add to Home Screen instructions */ return; }
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        setDeferredPrompt(null);
-    };
-}
-```
+  }
+  ```
 
 ### Platform Behavior
 | Platform | Trigger | What Happens |
 |---|---|---|
 | Android Chrome | `beforeinstallprompt` event | Native Chrome install banner |
 | iOS Safari | Always available (no event) | Show manual Share → "Add to Home Screen" modal |
-| Already installed | `display-mode: standalone` | Button disabled / shows "✓ INSTALLED" |
+| Already installed | `display - mode: standalone` | Button disabled / shows "✓ INSTALLED" |
 | Desktop | No `beforeinstallprompt` | Show default button text |
 
 ### Button Label Pattern
 ```javascript
-const installLabel = isInstalled ? '✓ INSTALLED'
+  const installLabel = isInstalled ? '✓ INSTALLED'
     : isIOS ? '⊕ ADD TO HOME SCREEN'
-    : canInstall ? '⊕ INSTALL APP'
-    : defaultButtonText;
-```
+      : canInstall ? '⊕ INSTALL APP'
+        : defaultButtonText;
+  ```
 
 ### iOS Instructions Modal
 iOS does NOT support `beforeinstallprompt`. Show a bottom-sheet modal with:
@@ -491,6 +517,6 @@ iOS does NOT support `beforeinstallprompt`. Show a bottom-sheet modal with:
 
 ### Important Notes
 - Android `beforeinstallprompt` only fires over **HTTPS** (works on localhost for dev)
-- The service worker (`sw.js`) must be at the root `/sw.js` — not a subdirectory
+- The service worker (`sw.js`) must be at the root ` / sw.js` — not a subdirectory
 - `manifest.json` must have `"display": "standalone"` for the OS to recognize it as installable
 - iOS standalone detection: `window.navigator.standalone === true` (not matchMedia)

@@ -31,37 +31,44 @@ function HeroSection({ STYLES, title, subtitle, buttonText, dc }) {
         // Detect if already installed as PWA
         const standalone = window.matchMedia('(display-mode: standalone)').matches
             || window.navigator.standalone === true;
-        setIsInstalled(standalone);
+        if (standalone || window.__pwaInstalled) {
+            setIsInstalled(true);
+            return;
+        }
 
-        if (standalone) return;
-
-        // iOS: show manual instructions option
+        // iOS: always show install option (manual Share → Add to Home Screen)
         if (ios) {
             setCanInstall(true);
             return;
         }
 
-        // Android Chrome: capture beforeinstallprompt
-        const onPrompt = (e) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
+        // ⚡ FAST PATH: layout.jsx captures beforeinstallprompt early and stores it here.
+        // Check immediately on mount — no waiting for the event!
+        if (window.__pwaInstallPrompt) {
+            setDeferredPrompt(window.__pwaInstallPrompt);
+            setCanInstall(true);
+        }
+
+        // FALLBACK: listen for pwa-install-ready in case it fires after mount
+        const onReady = (e) => {
+            setDeferredPrompt(e.detail || window.__pwaInstallPrompt);
             setCanInstall(true);
         };
-
-        window.addEventListener('beforeinstallprompt', onPrompt);
-        window.addEventListener('appinstalled', () => {
+        const onInstalled = () => {
             setIsInstalled(true);
             setCanInstall(false);
             setDeferredPrompt(null);
-        });
+        };
 
-        // Register service worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => { });
-        }
+        window.addEventListener('pwa-install-ready', onReady);
+        window.addEventListener('pwa-installed', onInstalled);
 
-        return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+        return () => {
+            window.removeEventListener('pwa-install-ready', onReady);
+            window.removeEventListener('pwa-installed', onInstalled);
+        };
     }, []);
+
 
     const handleInstall = async () => {
         if (isIOS) {
