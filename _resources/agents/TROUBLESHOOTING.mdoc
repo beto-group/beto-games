@@ -646,3 +646,20 @@ without `const`) or failed to resolve `.js` extensions to `.generated.jsx`.
             const isInstalled = window.matchMedia('(display-mode: standalone)').matches
                 || window.navigator.standalone === true;  // iOS Safari specific
             ```
+
+            ---
+
+            ## 19. No Audio/Sounds on Mobile (iOS/Android)
+
+            ### 🟡 Game or App is Silent on Mobile Browser
+            **Symptoms**: Audio works fine on desktop but is completely silent on iPhone or Android mobile browsers.
+            **Root Cause**: User Gesture Requirement. Browsers block audio playback until the user interacts with the page. If your audio logic starts after a delay (e.g., a countdown or a `setTimeout`), the "gesture context" is lost and the audio is blocked.
+
+            **Solution**:
+            1. **Prime in Click Handler**: Call `window.speechSynthesis.speak(new SpeechSynthesisUtterance(''))` or play a silent buffer synchronously inside the `onClick` event of the "Start" button.
+            2. **SpeechSynthesis Specific**: Always call `window.speechSynthesis.cancel()` before starting a new session or on unmount to prevent queues from clogging.
+
+            **Debugging**:
+            - Check if the code is actually calling the play/speak function.
+            - Check the browser console for "Autoplay policy" warnings.
+            - Verify the device isn't on "Silent Mode" (physical switch on iPhone).

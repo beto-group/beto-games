@@ -25,6 +25,32 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
 
 
 
+    const initAudio = () => {
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            // Prime speech synthesis with a silent utterance to unlock it on mobile
+            const utterance = new SpeechSynthesisUtterance('');
+            utterance.volume = 0;
+            window.speechSynthesis.speak(utterance);
+        }
+    };
+
+    const handleStartTraining = () => {
+        initAudio();
+        setCurrentN(1);
+        setCurrentInterval(3000);
+        startRound();
+    };
+
+    const handleStartCustom = () => {
+        initAudio();
+        startRound();
+    };
+
+    const handleNextRound = () => {
+        initAudio();
+        startRound();
+    };
+
     return (
         <div style={styles.container}>
             {/* Overlays are moved to the end of the file or handled at the end of the return block */}
@@ -126,11 +152,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                 <button
                                     className="iq-main-btn"
                                     style={{ ...styles.button, ...styles.buttonPrimary }}
-                                    onClick={() => {
-                                        setCurrentN(1);
-                                        setCurrentInterval(3000);
-                                        startRound();
-                                    }}
+                                    onClick={handleStartTraining}
                                 >
                                     START TRAINING
                                 </button>
@@ -188,7 +210,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                         </div>
                                     </div>
                                 </div>
-                                <button style={{ ...styles.button, ...styles.buttonPrimary }} onClick={startRound}>
+                                <button style={{ ...styles.button, ...styles.buttonPrimary }} onClick={handleStartCustom}>
                                     START SESSION
                                 </button>
                                 <button
@@ -375,7 +397,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                         </div>
 
                         <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
-                            <button style={{ ...styles.button, ...styles.buttonPrimary }} onClick={startRound}>
+                            <button style={{ ...styles.button, ...styles.buttonPrimary }} onClick={handleNextRound}>
                                 NEXT ROUND
                             </button>
                             <button style={{ ...styles.button, border: 'none', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontSize: '0.7rem' }} onClick={() => { quitGame(); setViewMode('main'); }}>
