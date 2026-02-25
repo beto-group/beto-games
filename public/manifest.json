@@ -1,7 +1,7 @@
 {
-  "name": "Nexus Core",
-  "short_name": "Nexus",
-  "description": "The Next-Gen Software Platform",
+  "name": "BETO.GAMES | The Next-Gen Meta-Game Platform",
+  "short_name": "BETO.GAMES",
+  "description": "The Next-Gen Meta-Game Platform",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

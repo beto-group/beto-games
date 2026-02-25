@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import settings from '../../../data/settings.generated.json';
 
 export const runtime = 'edge';
 
@@ -6,10 +7,13 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const game = searchParams.get('game');
 
+    const appTitle = settings.title?.split('|')[0]?.trim() || "BETO.GAMES";
+    const appShortName = appTitle.includes('.') ? appTitle : (appTitle.split(' ')[0] || "BETO");
+
     const baseManifest = {
-        "name": "Nexus Core",
-        "short_name": "Nexus",
-        "description": "The Next-Gen Software Platform",
+        "name": settings.title || "BETO.GAMES | The Next-Gen Meta-Game Platform",
+        "short_name": appShortName,
+        "description": settings.description || "The Next-Gen Meta-Game Platform",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#000000",
@@ -33,7 +37,7 @@ export async function GET(request) {
     if (game) {
         // Customize for the specific game
         const gameName = game.toUpperCase() === 'IQGAME' ? 'IQ Game' : game;
-        baseManifest.name = `Nexus: ${gameName}`;
+        baseManifest.name = `${appShortName}: ${gameName}`;
         baseManifest.short_name = gameName;
         baseManifest.start_url = `/?game=${encodeURIComponent(game)}`;
     }

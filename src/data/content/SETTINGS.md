@@ -1,8 +1,8 @@
 ---
-title: Nexus Core | The Next-Gen Software Platform
-description: Build, deploy, and manage futuristic web applications with Nexus Core. Designed for high performance and
+title: BETO.GAMES | The Next-Gen Meta-Game Platform
+description: Build, deploy, and manage futuristic game applications with BETO.GAMES. Designed for high performance and
 premium aesthetics.
-keywords: Next.js, Datacore, AI, Software Platform, Premium Design
+keywords: Next.js, Datacore, AI, Meta-Game Platform, Premium Design
 ---
 
 # Site Settings
