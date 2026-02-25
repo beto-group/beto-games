@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 
-function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, saveSession } = {}) {
+function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, saveSession, onSoundFallback } = {}) {
     const localDc = typeof dc !== 'undefined' ? dc : (typeof window !== 'undefined' ? window.dc : null);
     // Hooks provided by React import
 
@@ -193,17 +193,27 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
         // Define game loop first so we can call it immediately
         const runGameLoop = () => {
             const speak = (text) => {
-                if (!window.speechSynthesis) return;
+                const ss = window.speechSynthesis;
+                if (!ss) {
+                    if (onSoundFallback) onSoundFallback(440, 0.1);
+                    return;
+                }
 
-                // Clear any pending speech to avoid backlog/stutter on mobile
-                window.speechSynthesis.cancel();
+                // GrapheneOS Check: If voices list is empty, TTS will fail silently. Use fallback.
+                const voices = ss.getVoices();
+                if (voices.length === 0) {
+                    console.log("No TTS voices detected - using Cloud Asset Fallback");
+                    if (onSoundFallback) onSoundFallback(text);
+                    return;
+                }
 
+                ss.cancel();
                 const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
                 utterance.lang = 'en-US';
                 utterance.volume = 1.0;
                 utterance.rate = 1.0;
                 utterance.pitch = 1.0;
-                window.speechSynthesis.speak(utterance);
+                ss.speak(utterance);
             };
 
             let stepCount = 0;

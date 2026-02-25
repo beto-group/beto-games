@@ -19,44 +19,99 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
     // --- Extracting Overlays and Charts outside main component for performance & best practices ---
 
 
+    const audioCtxRef = localDc.useRef(null);
+    const soundCacheRef = localDc.useRef({});
 
-
-
-
-
+    const LETTER_ASSETS = {
+        'C': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/c.mp3',
+        'H': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/h.mp3',
+        'K': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/k.mp3',
+        'L': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/l.mp3',
+        'Q': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/q.mp3',
+        'R': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/r.mp3',
+        'S': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/s.mp3',
+        'T': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/t.mp3'
+    };
 
     const initAudio = () => {
         if (typeof window === 'undefined') return;
 
-        // 1. Web Audio Unlock (Universal)
+        // 1. Web Audio Unlock
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
+            if (AudioContext && !audioCtxRef.current) {
                 const ctx = new AudioContext();
                 if (ctx.state === 'suspended') ctx.resume();
-                // Create & play a micro-silent buffer
-                const buffer = ctx.createBuffer(1, 1, 22050);
-                const source = ctx.createBufferSource();
-                source.buffer = buffer;
-                source.connect(ctx.destination);
-                source.start(0);
+                audioCtxRef.current = ctx;
+            } else if (audioCtxRef.current?.state === 'suspended') {
+                audioCtxRef.current.resume();
             }
         } catch (e) {
             console.warn("AudioContext unlock failed", e);
         }
 
-        // 2. Speech Synthesis Unlock (iOS Safari Specific)
+        // 2. Speech Synthesis Unlock
         if (window.speechSynthesis) {
-            // Force load voices
             window.speechSynthesis.getVoices();
-
-            // Audible priming (silent utterance often fails to unlock async loops on iOS)
             const utterance = new SpeechSynthesisUtterance(" ");
-            utterance.volume = 0.01; // Low but non-zero
-            utterance.rate = 10;     // Extremely fast
+            utterance.volume = 0.01;
+            utterance.rate = 10;
             window.speechSynthesis.speak(utterance);
         }
+
+        // 3. Pre-load Cloud Letter Assets (for environments like GrapheneOS without TTS)
+        Object.keys(LETTER_ASSETS).forEach(char => {
+            if (!soundCacheRef.current[char]) {
+                const audio = new Audio(LETTER_ASSETS[char]);
+                audio.load();
+                soundCacheRef.current[char] = audio;
+            }
+        });
     };
+
+    const playFallbackBeep = (freq = 440, duration = 0.1) => {
+        if (!audioCtxRef.current) return;
+        try {
+            const ctx = audioCtxRef.current;
+            if (ctx.state === 'suspended') ctx.resume();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + duration);
+        } catch (e) {
+            console.warn("Fallback beep failed", e);
+        }
+    };
+
+    const playLetterSound = (char) => {
+        const sound = soundCacheRef.current[char.toUpperCase()];
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Asset play failed", e));
+        }
+    };
+
+    const {
+        gameState, currentN, setCurrentN,
+        currentInterval, setCurrentInterval,
+        sequence, currentIndex, showStimulus,
+        activeKeys,
+        score, lastAccuracy, dPrime, progression,
+        startRound, checkMatch, quitGame
+    } = useIQGame({
+        initialN: 1,
+        initialInterval: 3000,
+        roundLength: 22,
+        saveSession,
+        onSoundFallback: playLetterSound // Use the letter sound player instead of beeps
+    });
+
+    const currentStep = sequence[currentIndex] || {};
 
     const handleStartTraining = () => {
         initAudio();
