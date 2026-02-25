@@ -1,16 +1,9 @@
 function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPath, onToggleFullTab, isFullTab, isInception = false }) {
     const localDc = typeof dc !== 'undefined' ? dc : (typeof window !== 'undefined' ? window.dc : null);
     const { useState } = localDc;
-    const {
-        gameState, currentN, setCurrentN,
-        currentInterval, setCurrentInterval,
-        sequence, currentIndex, showStimulus,
-        activeKeys,
-        score, lastAccuracy, dPrime, progression,
-        startRound, checkMatch, quitGame
-    } = useIQGame({ initialN: 1, initialInterval: 3000, roundLength: 22, saveSession });
 
-    const currentStep = sequence[currentIndex] || {};
+
+
     const [viewMode, setViewMode] = useState('main'); // main, custom
 
     const [showTutorial, setShowTutorial] = useState(false);
@@ -69,24 +62,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
         });
     };
 
-    const playFallbackBeep = (freq = 440, duration = 0.1) => {
-        if (!audioCtxRef.current) return;
-        try {
-            const ctx = audioCtxRef.current;
-            if (ctx.state === 'suspended') ctx.resume();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.setValueAtTime(freq, ctx.currentTime);
-            gain.gain.setValueAtTime(0.1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + duration);
-        } catch (e) {
-            console.warn("Fallback beep failed", e);
-        }
-    };
+
 
     const playLetterSound = (char) => {
         const sound = soundCacheRef.current[char.toUpperCase()];
