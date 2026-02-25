@@ -16,14 +16,14 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
     const soundCacheRef = localDc.useRef({});
 
     const LETTER_ASSETS = {
-        'C': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/c.mp3',
-        'H': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/h.mp3',
-        'K': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/k.mp3',
-        'L': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/l.mp3',
-        'Q': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/q.mp3',
-        'R': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/r.mp3',
-        'S': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/s.mp3',
-        'T': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/t.mp3'
+        'C': 'https://raw.githubusercontent.com/kiranShamsHere/englishAlphabetLearning/main/c1.mp3',
+        'H': 'https://raw.githubusercontent.com/kiranShamsHere/englishAlphabetLearning/main/h.mp3',
+        'K': 'https://raw.githubusercontent.com/kiranShamsHere/englishAlphabetLearning/main/k.mp3',
+        'L': 'https://raw.githubusercontent.com/kiranShamsHere/englishAlphabetLearning/main/l.mp3',
+        'Q': 'https://raw.githubusercontent.com/kiranShamsHere/englishAlphabetLearning/main/q.mp3',
+        'R': 'https://raw.githubusercontent.com/kiranShamsHere/englishAlphabetLearning/main/r.mp3',
+        'S': 'https://raw.githubusercontent.com/kiranShamsHere/englishAlphabetLearning/main/s.mp3',
+        'T': 'https://raw.githubusercontent.com/kiranShamsHere/englishAlphabetLearning/main/t.mp3'
     };
 
     const initAudio = () => {
