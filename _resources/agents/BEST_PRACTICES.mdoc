@@ -441,7 +441,7 @@ Add a synchronous `
 ```javascript
     // src/app/layout.jsx
     < script dangerouslySetInnerHTML = {{
-      __html: `
+    __html: `
     (function() {
         // Register sw immediately
         if ('serviceWorker' in navigator) {
@@ -523,32 +523,44 @@ iOS does NOT support `beforeinstallprompt`. Show a bottom-sheet modal with:
 ## 18. Mobile Audio / Speech Synthesis Unlock
 
 ### Overview
-Mobile browsers (especially iOS Safari) block audio and `window.speechSynthesis` until a direct user gesture (click/tap) unlocks them. This "unlock" often doesn't persist if the audio is triggered inside a `setTimeout` or `setInterval` much later.
+Mobile browsers (especially iOS Safari) block audio and `window.speechSynthesis` until a direct user gesture (click/tap) unlocks them. The most robust unlock involves both Web Audio and Speech Synthesis priming.
 
-### The "Priming" Pattern
-To ensure audio works, prime the engine **synchronously** inside the `onClick` handler of the button that starts the experience.
+### The "Extreme Unlock" Pattern
+To ensure audio works, prime both engines **synchronously** inside the gesture handler:
 
 ```javascript
-const initAudio = () => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-        // Prime speech synthesis with a silent utterance to unlock it
-        const utterance = new SpeechSynthesisUtterance('');
-        utterance.volume = 0;
-        window.speechSynthesis.speak(utterance);
+  const initAudio = () => {
+    if (typeof window === 'undefined') return;
+
+    // 1. Web Audio Unlock
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      const ctx = new AudioContext();
+      if (ctx.state === 'suspended') ctx.resume();
+      // Play a silent buffer
+      const source = ctx.createBufferSource();
+      source.buffer = ctx.createBuffer(1, 1, 22050);
+      source.connect(ctx.destination);
+      source.start(0);
     }
-};
 
-const handleStart = () => {
-    initAudio(); // MUST be called synchronously in the gesture handler
-    startExperience(); // Can now safely use audio inside timeouts/async calls
-};
+    // 2. Speech Synthesis Unlock
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      // MUST speak an audible character (like " ") with volume > 0
+      const utterance = new SpeechSynthesisUtterance(" ");
+      utterance.volume = 0.01;
+      utterance.rate = 10;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
-return (
-    <button onClick={handleStart}>START</button>
-);
-```
+  const handleStart = () => {
+    initAudio();
+    startExperience();
+  };
+  ```
 
 ### Important Notes
-- **Gesture Chain**: The `speak()` call must be within the same call stack as the user interaction.
-- **Persistence**: Once unlocked, subsequent calls to `speak()` usually work for the duration of the session, but calling `initAudio` on every major user action (like "Next Round") is safer.
-- **Volume**: Setting `utterance.volume = 0` prevents a "click" sound or weird artifacting on some devices while still fulfilling the gesture requirement.
+- **Audible vs Silent**: Silent utterances (`volume = 0`) often fail to satisfy Safari's requirements for unlocking asynchronous speech loops.
+- **Queue Clearing**: Use `speechSynthesis.cancel()` before starting a new letter to prevent backlog on slower mobile CPUs.

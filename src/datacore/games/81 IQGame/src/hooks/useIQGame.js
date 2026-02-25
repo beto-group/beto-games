@@ -189,8 +189,16 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
         // Define game loop first so we can call it immediately
         const runGameLoop = () => {
             const speak = (text) => {
+                if (!window.speechSynthesis) return;
+
+                // Clear any pending speech to avoid backlog/stutter on mobile
+                window.speechSynthesis.cancel();
+
                 const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
+                utterance.lang = 'en-US';
+                utterance.volume = 1.0;
                 utterance.rate = 1.0;
+                utterance.pitch = 1.0;
                 window.speechSynthesis.speak(utterance);
             };
 

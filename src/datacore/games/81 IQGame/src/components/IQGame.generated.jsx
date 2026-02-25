@@ -30,10 +30,34 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
 
 
     const initAudio = () => {
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-            // Prime speech synthesis with a silent utterance to unlock it on mobile
-            const utterance = new SpeechSynthesisUtterance('');
-            utterance.volume = 0;
+        if (typeof window === 'undefined') return;
+
+        // 1. Web Audio Unlock (Universal)
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                if (ctx.state === 'suspended') ctx.resume();
+                // Create & play a micro-silent buffer
+                const buffer = ctx.createBuffer(1, 1, 22050);
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(ctx.destination);
+                source.start(0);
+            }
+        } catch (e) {
+            console.warn("AudioContext unlock failed", e);
+        }
+
+        // 2. Speech Synthesis Unlock (iOS Safari Specific)
+        if (window.speechSynthesis) {
+            // Force load voices
+            window.speechSynthesis.getVoices();
+
+            // Audible priming (silent utterance often fails to unlock async loops on iOS)
+            const utterance = new SpeechSynthesisUtterance(" ");
+            utterance.volume = 0.01; // Low but non-zero
+            utterance.rate = 10;     // Extremely fast
             window.speechSynthesis.speak(utterance);
         }
     };
