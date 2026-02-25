@@ -67,6 +67,22 @@ export default config({
         },
     },
     singletons: {
+        site_settings: singleton({
+            label: 'Site Settings',
+            path: 'src/data/content/SETTINGS',
+            format: { contentField: 'content' },
+            schema: {
+                title: fields.text({ label: 'Site Title', defaultValue: 'Nexus Core | The Next-Gen Software Platform' }),
+                description: fields.text({ label: 'Site Description', multiline: true, defaultValue: 'Build, deploy, and manage futuristic web applications with Nexus Core.' }),
+                keywords: fields.text({ label: 'Site Keywords', defaultValue: 'Next.js, Datacore, AI, Software Platform, Premium Design' }),
+                content: fields.document({
+                    label: 'Admin Notes',
+                    formatting: true,
+                    dividers: true,
+                    links: true,
+                }),
+            },
+        }),
         agent_knowledge: singleton({
             label: 'Agent: Knowledge',
             path: '_resources/agents/KNOWLEDGE',

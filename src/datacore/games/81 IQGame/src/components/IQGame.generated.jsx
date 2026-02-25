@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as utils_mod from '../utils/scoreManager.generated.jsx';
 
-function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPath, onToggleFullTab, isFullTab, isInception = false }) {
+function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPath, onToggleFullTab, isFullTab, isInception = false, setCurrentPage }) {
+    console.log('🎮 [IQGame] setCurrentPage available:', !!setCurrentPage);
     const localDc = typeof dc !== 'undefined' ? dc : (typeof window !== 'undefined' ? window.dc : null);
     // Hooks provided by React import
 
@@ -20,14 +21,14 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
     const soundCacheRef = localDc.useRef({});
 
     const LETTER_ASSETS = {
-        'C': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/c.mp3',
-        'H': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/h.mp3',
-        'K': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/k.mp3',
-        'L': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/l.mp3',
-        'Q': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/q.mp3',
-        'R': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/r.mp3',
-        'S': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/s.mp3',
-        'T': 'https://raw.githubusercontent.com/ndrwhr/mbmbalphabet/master/raw-audio/letters/t.mp3'
+        'C': 'https://raw.githubusercontent.com/digitalveysel/english-alphabet-with-keyboard/main/public/sounds/C.mp3',
+        'H': 'https://raw.githubusercontent.com/digitalveysel/english-alphabet-with-keyboard/main/public/sounds/H.mp3',
+        'K': 'https://raw.githubusercontent.com/digitalveysel/english-alphabet-with-keyboard/main/public/sounds/K.mp3',
+        'L': 'https://raw.githubusercontent.com/digitalveysel/english-alphabet-with-keyboard/main/public/sounds/L.mp3',
+        'Q': 'https://raw.githubusercontent.com/digitalveysel/english-alphabet-with-keyboard/main/public/sounds/Q.mp3',
+        'R': 'https://raw.githubusercontent.com/digitalveysel/english-alphabet-with-keyboard/main/public/sounds/R.mp3',
+        'S': 'https://raw.githubusercontent.com/digitalveysel/english-alphabet-with-keyboard/main/public/sounds/S.mp3',
+        'T': 'https://raw.githubusercontent.com/digitalveysel/english-alphabet-with-keyboard/main/public/sounds/T.mp3'
     };
 
     const initAudio = () => {
@@ -74,6 +75,14 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
             sound.currentTime = 0;
             sound.play().catch(e => console.warn("Asset play failed", e));
         }
+    };
+
+    const stopAllSounds = () => {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        Object.values(soundCacheRef.current).forEach(sound => {
+            sound.pause();
+            sound.currentTime = 0;
+        });
     };
 
     const {
@@ -142,13 +151,13 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                 }
                 .iq-main-btn:hover {
                     transform: scale(1.05);
-                    background: rgba(138, 43, 226, 0.25) !important;
-                    box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+                    background: rgba(255, 255, 255, 0.08) !important;
+                    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
                 }
                 .iq-game-btn:hover {
-                    background: rgba(138, 43, 226, 0.3) !important;
-                    border-color: #8a2be2 !important;
-                    box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+                    background: rgba(255, 255, 255, 0.1) !important;
+                    border-color: rgba(255, 255, 255, 0.3) !important;
+                    box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
                 }
                 .iq-game-btn:active {
                     transform: scale(0.95);
@@ -156,36 +165,39 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
             `}</style>
             {/* HUD */}
             {gameState === 'playing' && (
-                <div style={styles.stats}>
-                    <div>LEVEL <span style={styles.statValue}>{currentN}</span></div>
-                </div>
-            )}
+                <div style={{
+                    position: 'absolute',
+                    top: 'clamp(80px, 10vh, 120px)',
+                    left: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '24px',
+                    zIndex: 2000
+                }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>LEVEL</div>
+                        <div style={{ color: '#ffffff', fontWeight: '900', fontSize: 'clamp(20px, 3vh, 32px)', lineHeight: 1 }}>{currentN}</div>
+                    </div>
 
-            {/* Exit Button during game */}
-            {gameState === 'playing' && (
-                <div
-                    onClick={quitGame}
-                    style={{
-                        position: 'absolute',
-                        top: 'clamp(10px, 3vw, 40px)',
-                        right: 'clamp(10px, 3vw, 40px)',
-                        cursor: 'pointer',
-                        padding: 'clamp(6px, 2vw, 12px) clamp(12px, 4vw, 24px)',
-                        borderRadius: '6px',
-                        background: 'rgba(255, 77, 77, 0.2)',
-                        border: '1px solid rgba(255, 77, 77, 0.4)',
-                        color: '#ff4d4d',
-                        fontSize: 'clamp(10px, 2.5vw, 14px)',
-                        letterSpacing: '0.1em',
-                        fontWeight: '700',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        zIndex: 100
-                    }}
-                >
-                    <dc.Icon icon="x" style={{ width: '16px', height: '16px' }} />
-                    EXIT
+                    <button
+                        onClick={() => { quitGame(); stopAllSounds(); }}
+                        style={{
+                            padding: '8px 16px',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: 'rgba(255,255,255,0.6)',
+                            fontSize: '10px',
+                            fontWeight: '900',
+                            letterSpacing: '0.1em',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            textTransform: 'uppercase'
+                        }}
+                        className="iq-main-btn"
+                    >
+                        QUIT
+                    </button>
                 </div>
             )}
 
@@ -210,7 +222,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(10px, 1.5vh, 16px)', alignItems: 'center', width: '100%', flexShrink: 0 }}>
                                 <button
                                     className="iq-main-btn"
-                                    style={{ ...styles.button, ...styles.buttonPrimary }}
+                                    style={{ ...styles.button, border: '1px solid #fff' }}
                                     onClick={handleStartTraining}
                                 >
                                     START TRAINING
@@ -236,9 +248,6 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                     style={{
                                         ...styles.button,
                                         ...styles.buttonSecondary,
-                                        background: 'rgba(138, 43, 226, 0.15)',
-                                        border: '1px solid rgba(138, 43, 226, 0.4)',
-                                        color: '#d8b4fe',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -247,6 +256,27 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                 >
                                     <dc.Icon icon="bar-chart-2" size={16} />
                                     VIEW STATS
+                                </button>
+                                <button
+                                    className="iq-main-btn"
+                                    onClick={() => {
+                                        if (setCurrentPage) setCurrentPage('GAMES');
+                                        else window.history.back();
+                                    }}
+                                    style={{
+                                        ...styles.button,
+                                        ...styles.buttonSecondary,
+                                        marginTop: '12px',
+                                        background: 'rgba(255, 255, 255, 0.03)',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        color: 'rgba(255, 255, 255, 0.3)',
+                                        opacity: 0.8,
+                                        fontSize: 'clamp(11px, 1.4vmin, 13px)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.2em'
+                                    }}
+                                >
+                                    EXIT GAME
                                 </button>
                             </div>
                         ) : (
@@ -343,7 +373,6 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                 transition: 'all 0.12s ease'
                             }}
                             onPointerDown={(e) => { e.preventDefault(); checkMatch('pos'); }}
-                            onClick={(e) => { e.preventDefault(); checkMatch('pos'); }}
                         >
                             <span className="iq-btn-icon" style={{ color: 'inherit' }}>
                                 <dc.Icon icon="eye" />
@@ -377,7 +406,6 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                                 transition: 'all 0.12s ease'
                             }}
                             onPointerDown={(e) => { e.preventDefault(); checkMatch('sound'); }}
-                            onClick={(e) => { e.preventDefault(); checkMatch('sound'); }}
                         >
                             <span className="iq-btn-icon" style={{ color: 'inherit' }}>
                                 <dc.Icon icon="volume-2" />
@@ -483,6 +511,7 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
                     resetStats={resetStats}
                     folderPath={folderPath}
                     setShowStats={setShowStats}
+                    setCurrentPage={setCurrentPage}
                     localDc={localDc}
                 />
             )}
@@ -494,18 +523,21 @@ function IQGame({ styles, useIQGame, saveSession, getStats, resetStats, folderPa
 const LevelHistoryChart = ({ sessions, styles }) => {
     if (!sessions || sessions.length === 0) return null;
 
+    // Helper
+    const clamp = (min, val, max) => Math.min(Math.max(val, min), max);
+
     // Show all sessions
     const data = sessions;
     if (data.length === 0) return null;
+
+    const maxN = Math.max(...data.map(s => s.nLevel), 3); // Min max is 3 for scale
+    const minN = 1;
 
     const width = 600;
     const height = clamp(150, 40 * maxN, 200);
     const padding = { top: 20, right: 20, bottom: 30, left: 40 };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
-
-    const maxN = Math.max(...data.map(s => s.nLevel), 3); // Min max is 3 for scale
-    const minN = 1;
 
     const getX = (index) => {
         if (data.length <= 1) return padding.left + chartWidth / 2;
@@ -640,7 +672,7 @@ const ReactionTimeChart = ({ sessions, styles }) => {
 };
 
 // --- Statistics Overlay Component ---
-const StatsOverlay = ({ styles, getStats, resetStats, folderPath, setShowStats, localDc }) => {
+const StatsOverlay = ({ styles, getStats, resetStats, folderPath, setShowStats, setCurrentPage, localDc }) => {
     // Hooks provided by React import
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -774,20 +806,31 @@ const StatsOverlay = ({ styles, getStats, resetStats, folderPath, setShowStats, 
                     )}
                 </div>
 
-                {/* Fixed footer */}
-                <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'center', gap: '12px', flexShrink: 0 }}>
                     <div
                         onClick={handleReset}
                         style={{
-                            cursor: 'pointer', padding: '10px 28px', borderRadius: '8px',
+                            cursor: 'pointer', padding: '10px 24px', borderRadius: '8px',
                             background: confirmReset ? 'rgba(255,0,0,0.2)' : 'transparent',
                             border: confirmReset ? '1px solid rgba(255,0,0,0.7)' : '1px solid rgba(255,77,77,0.2)',
                             color: confirmReset ? '#ff4d4d' : 'rgba(255,77,77,0.4)',
-                            fontSize: '11px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase',
+                            fontSize: '10px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase',
                             transition: 'all 0.2s ease'
                         }}
                     >
-                        {confirmReset ? "SURE? CLICK TO WIPE ALL DATA" : "RESET ALL DATA"}
+                        {confirmReset ? "CLICK TO WIPE ALL" : "RESET DATA"}
+                    </div>
+                    <div
+                        onClick={() => setShowStats(false)}
+                        style={{
+                            cursor: 'pointer', padding: '10px 24px', borderRadius: '8px',
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            color: 'rgba(255,255,255,0.3)',
+                            fontSize: '10px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase',
+                        }}
+                    >
+                        BACK TO LOBBY
                     </div>
                 </div>
             </div>

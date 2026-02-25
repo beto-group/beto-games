@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 function DatacoreShim(props) {
     const { name, componentProps = {}, folderPath, STYLES, setCurrentPage } = props;
+    if (typeof window !== 'undefined' && name === 'IQGame') {
+        console.log(`💎 [DatacoreShim:${name}] setCurrentPage passed:`, !!setCurrentPage);
+    }
     const localDc = props.dc || (typeof dc !== 'undefined' ? dc : (typeof window !== 'undefined' ? window.dc : null));
     const isRealDatacore = typeof dc !== 'undefined' && dc.app?.vault && (window.app || window.obsidian);
     // Hooks provided by React import

@@ -44,10 +44,10 @@ function WebsiteBuilder(props) {
                 let text = "";
 
                 if (typeof window !== 'undefined' && window.app && window.app.vault) {
-                    const indexPath = folderPath + '/src/data/content/INDEX.mdoc';
+                    const indexPath = folderPath + '/src/data/content/INDEX.md';
                     text = await window.app.vault.adapter.read(indexPath);
                 } else {
-                    const res = await fetch(`${CONTENT_PATH}/INDEX.mdoc`);
+                    const res = await fetch(`${CONTENT_PATH}/INDEX.md`);
                     text = await res.text();
                 }
 
@@ -209,6 +209,32 @@ function WebsiteBuilder(props) {
     // 3. Routing Hook
     useRouting({ sidebarTab: activeTab, setSidebarTab: setActiveTab, isMounted: true, dcApi });
 
+    // 3.5 PWA Manifest Swapper
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+
+        let manifestUrl = '/manifest.json'; // Default
+        if (activeTab.startsWith('PLAY/')) {
+            const gameId = activeTab.split('/')[1]?.toLowerCase();
+            if (gameId) {
+                manifestUrl = `/api/manifest?game=${encodeURIComponent(gameId)}`;
+            }
+        }
+
+        // Find or create the manifest link
+        let link = document.querySelector('link[rel="manifest"]');
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'manifest';
+            document.head.appendChild(link);
+        }
+
+        if (link.getAttribute('href') !== manifestUrl) {
+            console.log(`[PWA] Updating manifest context: ${manifestUrl}`);
+            link.setAttribute('href', manifestUrl);
+        }
+    }, [activeTab]);
+
     // 4. Fetch Tab Content
     useEffect(() => {
         if (!activeTab || activeTab === 'INDEX') return;
@@ -220,7 +246,7 @@ function WebsiteBuilder(props) {
             try {
                 // Default convention: Route NAME -> NAME.md
                 // Unless we have a routes map (which is hard to parse without YAML lib)
-                const filename = `${activeTab}.mdoc`;
+                const filename = `${activeTab}.md`;
                 let text = "";
 
                 if (typeof window !== 'undefined' && window.app && window.app.vault) {
@@ -239,7 +265,7 @@ function WebsiteBuilder(props) {
 
                 setContentCache(prev => ({ ...prev, [activeTab]: cleanContent }));
             } catch (e) {
-                console.warn(`Could not load ${activeTab}.mdoc`, e);
+                console.warn(`Could not load ${activeTab}.md`, e);
                 setContentCache(prev => ({ ...prev, [activeTab]: "# Content Not Found" }));
             }
         }
@@ -281,6 +307,7 @@ function WebsiteBuilder(props) {
                 components={boundComponents} // Pass self for recursion
                 folderPath={folderPath}
                 STYLES={STYLES}
+                setCurrentPage={setActiveTab}
             />
         )
     };

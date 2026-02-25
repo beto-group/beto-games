@@ -1,10 +1,10 @@
 const STYLES = {
     container: {
-        position: 'fixed',  // Takes over the full viewport, blocking page scroll entirely
+        position: 'absolute',  // Stay inside the parent container (Arena or Obsidian pane)
         top: 0,
         left: 0,
-        width: '100vw',
-        height: '100dvh',   // dvh = dynamic viewport height (handles mobile browser chrome)
+        width: '100%',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -14,7 +14,7 @@ const STYLES = {
         fontFamily: '"Outfit", "Inter", sans-serif',
         overflow: 'hidden',
         boxSizing: 'border-box',
-        zIndex: 100,        // Sit above the website nav
+        zIndex: 1,
     },
     glassCard: {
         background: 'rgba(0, 0, 0, 0)',
@@ -34,7 +34,6 @@ const STYLES = {
         marginBottom: '6px',
         letterSpacing: '0.2em',
         textTransform: 'uppercase',
-        textShadow: '0 0 40px rgba(138, 43, 226, 0.6)',
         textAlign: 'center'
     },
     subtitle: {
@@ -64,9 +63,9 @@ const STYLES = {
         transition: 'all 0.1s ease-out',
     },
     cellActive: {
-        background: '#8a2be2',
-        border: '1px solid #9d50bb',
-        boxShadow: '0 0 20px rgba(138, 43, 226, 0.5)',
+        background: '#ffffff',
+        border: '1px solid #ffffff',
+        boxShadow: '0 0 20px rgba(255, 255, 255, 0.4)',
     },
     controls: {
         display: 'flex',
@@ -96,9 +95,10 @@ const STYLES = {
         display: 'block',
     },
     buttonPrimary: {
-        background: 'linear-gradient(135deg, rgba(138,43,226,0.9) 0%, rgba(100,10,200,0.9) 100%)',
-        border: '1px solid rgba(138,43,226,0.8)',
-        boxShadow: '0 4px 24px rgba(138,43,226,0.3)',
+        background: '#ffffff',
+        border: '1px solid #ffffff',
+        color: '#000000',
+        boxShadow: '0 4px 24px rgba(255, 255, 255, 0.15)',
         padding: 'clamp(16px, 2.5vh, 24px) clamp(36px, 6vw, 72px)',
         fontSize: 'clamp(16px, 2.5vmin, 20px)',
         fontWeight: '700',
@@ -137,7 +137,7 @@ const STYLES = {
     },
     stats: {
         position: 'absolute',
-        top: '20px',
+        top: 'clamp(80px, 10vh, 120px)',
         left: '20px',
         fontSize: 'clamp(12px, 1.5vmin, 15px)',
         color: 'rgba(255, 255, 255, 0.6)',
@@ -185,7 +185,7 @@ const STYLES = {
     tutorialArrow: {
         position: 'absolute',
         height: '2px',
-        background: '#00ff88',
+        background: '#ffffff',
         zIndex: 10
     }
 };

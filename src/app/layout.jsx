@@ -1,48 +1,61 @@
-export const runtime = 'edge';
+import settings from '../data/settings.generated.json';
 
-export const metadata = {
-    title: 'Nexus Core | The Next-Gen Software Platform',
-    description: 'Build, deploy, and manage futuristic web applications with Nexus Core. Designed for high performance and premium aesthetics.',
-    keywords: ['Next.js', 'Datacore', 'AI', 'Software Platform', 'Premium Design'],
-    authors: [{ name: 'Nexus Team' }],
-    authors: [{ name: 'Nexus Team' }],
-    robots: 'index, follow',
-    metadataBase: new URL('https://nexuscore.app'),
-    icons: {
-        icon: [
-            { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-            { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-        ],
-        shortcut: '/favicon.ico',
-        apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-        other: [
-            { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-            { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-        ],
-    },
-    manifest: '/manifest.json',
-    openGraph: {
-        title: 'Nexus Core | The Next-Gen Software Platform',
-        description: 'Experience the future of web building with Nexus Core.',
-        url: 'https://nexuscore.app',
-        siteName: 'Nexus Core',
-        images: [
-            {
-                url: '/branding/nexus-og.png',
-                width: 1200,
-                height: 630,
-                alt: 'Nexus Core Platform Preview',
-            },
-        ],
-        locale: 'en_US',
-        type: 'website',
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'Nexus Core | The Next-Gen Software Platform',
-        description: 'Build the future with Nexus Core.',
-        images: ['/branding/nexus-og.png'],
-    },
+// export const runtime = 'edge';
+
+// Static metadata from pre-generated JSON
+function getSettings() {
+    return settings || {};
+}
+
+export async function generateMetadata() {
+    const settings = getSettings();
+    const siteTitle = settings.title || 'Nexus Core | The Next-Gen Software Platform';
+    const siteDesc = settings.description || 'Build, deploy, and manage futuristic web applications with Nexus Core.';
+    const siteKeywords = (settings.keywords || 'Next.js, Datacore, AI, Software Platform, Premium Design').split(',').map(k => k.trim());
+
+    return {
+        title: siteTitle,
+        description: siteDesc,
+        keywords: siteKeywords,
+        authors: [{ name: 'Nexus Team' }],
+        robots: 'index, follow',
+        metadataBase: new URL('https://nexuscore.app'),
+        icons: {
+            icon: [
+                { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+                { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+            ],
+            shortcut: '/favicon.ico',
+            apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+            other: [
+                { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+                { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+            ],
+        },
+        manifest: '/manifest.json',
+        openGraph: {
+            title: siteTitle,
+            description: siteDesc,
+            url: 'https://nexuscore.app',
+            siteName: 'Nexus Core',
+            images: [
+                {
+                    url: '/branding/nexus-og.png',
+                    width: 1200,
+                    height: 630,
+                    alt: 'Nexus Core Platform Preview',
+                },
+            ],
+            locale: 'en_US',
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: siteTitle,
+            description: siteDesc,
+            images: ['/branding/nexus-og.png'],
+        },
+    }
 }
 
 export const viewport = {

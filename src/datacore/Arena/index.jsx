@@ -1,7 +1,8 @@
 async function View({ STYLES, dc, DatacoreShim, folderPath }) {
     const { useState, useEffect } = dc;
 
-    return function Arena({ gameId = 'iqgame' }) {
+    return function Arena(props) {
+        const { gameId = 'iqgame', ...otherProps } = props;
         const [showLogic, setShowLogic] = useState(false);
 
         // Map gameId to Datacore component names
@@ -35,6 +36,7 @@ async function View({ STYLES, dc, DatacoreShim, folderPath }) {
                         name={targetComponent}
                         folderPath={folderPath}
                         isInception={true}
+                        {...otherProps}
                     />
                 </div>
 

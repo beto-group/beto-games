@@ -175,6 +175,8 @@ function syncAndExtract(src, destBase) {
             const relativeToSrc = path.relative(SRC_DIR, fullPath);
             let targetPath = path.join(destBase, relativeToSrc);
             if (relativeToSrc.startsWith('data/content/')) {
+                // Don't mirror SETTINGS back to public to avoid confusion
+                if (file === 'SETTINGS.md') return;
                 targetPath = path.join(destBase, path.basename(file));
             }
             const isCode = /\.(jsx|js|tsx|ts)$/.test(file) || file.endsWith('.generated.jsx');
@@ -183,11 +185,11 @@ function syncAndExtract(src, destBase) {
                 if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
                 fs.copyFileSync(fullPath, targetPath);
             }
-            if (file.endsWith('.md') || file.endsWith('.mdoc')) {
+            if (file.endsWith('.md')) {
                 const content = fs.readFileSync(fullPath, 'utf8');
                 const match = content.match(/```jsx\n([\s\S]*?)\n```/);
                 if (match && match[1]) {
-                    const jsxName = path.basename(file).replace(/\.(md|mdoc)$/, '.generated.jsx');
+                    const jsxName = path.basename(file).replace(/\.md$/, '.generated.jsx');
                     const jsxPath = path.join(path.dirname(fullPath), jsxName);
                     let webJsx = `"use client";\nimport React from 'react';\n\n`;
                     let body = match[1];
@@ -212,10 +214,58 @@ function syncAndExtract(src, destBase) {
     });
 }
 
+// 5. Extract Site Settings (Frontmatter) to JSON for runtime use without 'fs'
+function extractSettings() {
+    const settingsPath = path.join(SRC_DIR, 'data/content/SETTINGS.md');
+    const targetPath = path.join(SRC_DIR, 'data/settings.generated.json');
+
+    if (fs.existsSync(settingsPath)) {
+        const content = fs.readFileSync(settingsPath, 'utf8');
+        const match = content.match(/^---([\s\S]*?)---/);
+        const settings = {};
+
+        if (match) {
+            const yaml = match[1];
+            yaml.split('\n').forEach(line => {
+                const [key, ...val] = line.split(':');
+                if (key && val.length) {
+                    settings[key.trim()] = val.join(':').trim();
+                }
+            });
+        }
+
+        fs.writeFileSync(targetPath, JSON.stringify(settings, null, 2));
+        console.log(`[Shim] Generated Site Settings: ${path.relative(PROJECT_ROOT, targetPath)}`);
+    }
+}
+
+function watchSettings() {
+    const settingsPath = path.join(SRC_DIR, 'data/content/SETTINGS.md');
+    if (fs.existsSync(settingsPath)) {
+        console.log(`[Shim] Watching for changes: ${path.relative(PROJECT_ROOT, settingsPath)}`);
+        fs.watch(settingsPath, (eventType) => {
+            if (eventType === 'change') {
+                console.log('[Shim] Settings changed, regenerating...');
+                extractSettings();
+            }
+        });
+    }
+}
+
 console.log('[Shim] Starting build shim...');
 processSource(SRC_DIR);
+extractSettings();
 const publicContent = path.join(PROJECT_ROOT, 'public/content');
 syncAndExtract(SRC_DIR, publicContent);
+
+// Only watch if explicitly requested or in a likely dev environment
+const isWatch = process.argv.includes('--watch') || process.env.NODE_ENV === 'development' || process.env.npm_lifecycle_event === 'dev';
+if (isWatch) {
+    watchSettings();
+    // Keep process alive in watch mode
+    setInterval(() => { }, 1000);
+}
+
 const registryPath = path.join(DATACORE_DIR, 'registry.generated.jsx');
 const registryImports = Object.entries(componentRegistry)
     .map(([name, imp]) => `    '${name}': () => import('${imp}')`)

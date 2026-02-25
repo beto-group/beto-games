@@ -14,6 +14,11 @@ whether it's in an Obsidian pane or a full browser tab.
 - **Full-Height Pinning**: For full-page experiences (like games), use `position: absolute; inset: 0` on the root
 container in inception mode to bypass Obsidian's host height constraints.
 - **Premium Impact**: Favor heavy weights (800, 900) for headers and subtle letter-spacing adjustments for a pro look.
+- **Brand Consistency**: (NEW) Strip all legacy or conflicting brand colors (e.g., purples or oranges) from individual
+components. Standardize on the "Black on Black" theme (black backgrounds, 7-10% white borders, pure white text) for a
+cohesive platform feel.
+- **Navbar Clearance**: (NEW) Ensure all full-screen components (games/dashboards) clear a top margin of at least `80px`
+to `120px` to avoid collision with the main website navigation bar.
 - **Fluid GRID_SIZE**: For canvas-based games, avoid fixed pixel grids. Use window-width ratios for `GRID_SIZE` (e.g.,
 `Math.max(30, Math.min(80, Math.floor(w / 30)))`) to ensure immersion on both mobile and 4K displays.
 - **Robust Viewport Scaling**: (NEW) Components rendered in Datacore sidebars or embedded contexts often find `vw`
@@ -51,9 +56,10 @@ On extremely narrow windows (
   parent in the hierarchy must use `display: flex`, `flexDirection: column`, and `minHeight: 0` to ensure `flex: 1`
   correctly propagates height to child components. - **Box Sizing**: Use `boxSizing: 'border-box' ` on the root
   container to ensure padding (like for navbars) doesn't calculate into total height and trigger unwanted scrollbars. ##
-  🔄 Build & Sync - **Shim Build**: Always run `npm run shim` after editing any component or style file. - **Intelligent
-  Node.js Mocks**: For components that use Node built-ins (`fs`, `child_process`), `build-shim.js` provides functional
-  web mocks. Avoid manually stubbing these in component code; let the shim handle it to preserve Obsidian functionality.
+  🔄 Build & Sync - **Shim Build**: Always run `npm run shim` after editing any component or style file. - **Build-Time Settings Extraction**: (NEW) For server-side values (like site metadata) that need to be read from Disk but must work in any Next.js runtime (including Edge), extract them during the build step.
+    - **Pattern**: Use `build-shim.js` to parse `.md` frontmatter and write it to a static `settings.generated.json`.
+    - **Action**: Import the JSON directly in `layout.jsx`. This removes all runtime dependencies on `fs` and `path`, preventing 500 errors.
+- **Obsidian-First Markdown**: (NEW) Use standard `.md` extensions for all content and agent documentation. This ensures 100% Obsidian compatibility (backlinks, tags, previews) while remaining fully manageable via Keystatic.
   - **Robust Dependency Lifting**: Use `dc.require` for all internal dependencies. The build shim now robustly "lifts"
   these (including `.js` utilities and un-declared assignments) to top-level ESM imports for the web. - **Generated
   Files**: Verify that `.generated.jsx` files contain the correct `export` statements and relative imports. - **Website
@@ -561,6 +567,79 @@ To ensure audio works, prime both engines **synchronously** inside the gesture h
   };
   ```
 
-### Important Notes
-- **Audible vs Silent**: Silent utterances (`volume = 0`) often fail to satisfy Safari's requirements for unlocking asynchronous speech loops.
-- **Queue Clearing**: Use `speechSynthesis.cancel()` before starting a new letter to prevent backlog on slower mobile CPUs.
+### The "Asset-Based Fallback" Pattern (GrapheneOS / Engine-less)
+In hardened environments (like GrapheneOS/Vanadium), `window.speechSynthesis` may exist but have **no voices**, causing it to fail silently. Always implement a high-quality asset fallback:
+
+```javascript
+  const speak = (text, onFallback) => {
+    const ss = window.speechSynthesis;
+    const voices = ss?.getVoices() || [];
+
+    // GrapheneOS Detection: If API is missing or voices list is empty
+    if (!ss || voices.length === 0) {
+      console.log("No TTS voices detected - using Asset Fallback");
+      if (onFallback) onFallback(text);
+      return;
+    }
+
+    ss.cancel();
+    const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
+    ss.speak(utterance);
+  };
+  ```
+
+### Pre-loading Assets
+To avoid lag, pre-load MP3 assets in your `initAudio` gesture handler:
+```javascript
+  const soundCache = {};
+  const LETTER_ASSETS = { 'A': '...', 'B': '...' };
+
+  const initAudio = () => {
+    // ... usual Web Audio / TTS unlock ...
+
+    Object.keys(LETTER_ASSETS).forEach(char => {
+      const audio = new Audio(LETTER_ASSETS[char]);
+      audio.load();
+      soundCache[char] = audio;
+    });
+  };
+  ```
+
+## 19. Multi-Context PWA (Per-Game Installation)
+
+To allow specific games to be installed as "standalone" apps with their own icons and launch paths:
+
+### 1. Dynamic Manifest API
+Create an API route (e.g., `/ api / manifest ? game =...`) that returns a JSON manifest with customized `name`, `short_name`, and `start_url`.
+```javascript
+    // start_url: `/?game=IQGAME`
+    ```
+
+### 2. Manifest Swapper (WebsiteBuilder.jsx)
+Use a `useEffect` to dynamically update the ` < link rel = "manifest" > ` in the document head when the user navigates between games.
+```javascript
+  useEffect(() => {
+    const manifestUrl = activeTab.startsWith('PLAY/')
+      ? `/api/manifest?game=${activeTab.split('/')[1]}`
+      : '/manifest.json';
+    document.querySelector('link[rel="manifest"]')?.setAttribute('href', manifestUrl);
+  }, [activeTab]);
+  ```
+
+### 3. Direct Launch Routing (useRouting.jsx)
+Update the router to detect the `?game=` parameter on mount and immediately jump to the game, ensuring the PWA launch feels like a native app opening.
+```javascript
+useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const game = params.get('game');
+    if (game) setActiveTab(`PLAY/${game.toUpperCase()}`);
+}, []);
+```
+
+## 20. Obsidian-Friendly Extensions (.md)
+
+Previously, this project used `.mdoc` for Markdoc compatibility. To allow standard Obsidian features (native file links, graph view, tags) to work across the entire repo:
+- **Rule**: All content files and agent resources must use the `.md` extension.
+- **Config**: Ensure `keystatic.config.tsx` is updated to look for `.md` patterns.
+- **Orchestrator**: Update `WebsiteBuilder.jsx` to load `INDEX.md` and page-level `.md` files instead of the old convention.
+```

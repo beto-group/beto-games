@@ -291,6 +291,7 @@ function MarkdownRenderer({ content, STYLES, components = {}, folderPath, ...pro
                                     STYLES={STYLES}
                                     components={components}
                                     dc={localDc}
+                                    {...props}
                                 />
                             </div>
                         );

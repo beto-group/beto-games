@@ -25,7 +25,7 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
     const [progression, setProgression] = useState(null);
 
     const timerRef = useRef(null);
-
+    const startTimeoutRef = useRef(null);
     const flashTimerRef = useRef(null);
     const sequenceRef = useRef([]);
     const internalScoreRef = useRef({
@@ -271,7 +271,8 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
         };
 
         // Start with a slight delay
-        setTimeout(() => {
+        if (startTimeoutRef.current) clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = setTimeout(() => {
             runGameLoop();
         }, 1500);
     }, [currentN, roundLength, currentInterval, pregenerateSequence, persistSession]);
@@ -280,6 +281,7 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
     const quitGame = useCallback(() => {
         if (timerRef.current) clearInterval(timerRef.current);
         if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+        if (startTimeoutRef.current) clearTimeout(startTimeoutRef.current);
 
         // Stop any active speech
         window.speechSynthesis.cancel();
@@ -304,6 +306,7 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
             if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+            if (startTimeoutRef.current) clearTimeout(startTimeoutRef.current);
             window.speechSynthesis.cancel();
         };
     }, []);
@@ -322,24 +325,24 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
         lastTapRef.current[type] = now;
 
         const idx = inputTrackingRef.current.currentIndex;
-        if (gameState !== 'playing' || idx < currentN) {
-            // Allow toggling even in buffer period? No, buffer has no matches.
-            // But if user presses it, it's a false alarm in buffer?
-            // Existing logic:
-            if (gameState === 'playing' && idx >= 0) {
-                // Buffer zone logic
-                // If active, toggle OFF. If inactive, toggle ON (False Alarm)
-                if (activeKeys[type]) {
-                    // Toggle Off
-                    setActiveKeys(prev => ({ ...prev, [type]: false }));
-                    internalScoreRef.current[type].falseAlarms--; // Undo false alarm
-                } else {
-                    // Toggle On
-                    setActiveKeys(prev => ({ ...prev, [type]: true }));
-                    internalScoreRef.current[type].falseAlarms++;
-                }
-                setScore({ ...internalScoreRef.current });
+        if (gameState !== 'playing' || !showStimulus || idx < 0) {
+            // Block input during the 100ms flicker/blackout or if not playing
+            return;
+        }
+
+        if (idx < currentN) {
+            // Buffer zone logic
+            // If active, toggle OFF. If inactive, toggle ON (False Alarm)
+            if (activeKeys[type]) {
+                // Toggle Off
+                setActiveKeys(prev => ({ ...prev, [type]: false }));
+                internalScoreRef.current[type].falseAlarms--; // Undo false alarm
+            } else {
+                // Toggle On
+                setActiveKeys(prev => ({ ...prev, [type]: true }));
+                internalScoreRef.current[type].falseAlarms++;
             }
+            setScore({ ...internalScoreRef.current });
             return;
         }
 
@@ -376,13 +379,10 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
 
             if (isMatch) {
                 // Correct Match
-                // Only count line hit if not already matched (though double press is now handled by toggle)
-                // Since it was OFF, it wasn't matched.
                 internalScoreRef.current[type].hits++;
                 if (type === 'pos') inputTrackingRef.current.posMatchedInStep = true;
                 else inputTrackingRef.current.soundMatchedInStep = true;
 
-                // Calculate Reaction Time
                 const reactionTime = Date.now() - inputTrackingRef.current.lastStimulusTime;
                 internalScoreRef.current.reactionTimes[type].push(reactionTime);
             } else {
@@ -391,7 +391,7 @@ function useIQGame({ initialN = 1, roundLength = 22, initialInterval = 3000, sav
             }
         }
         setScore({ ...internalScoreRef.current });
-    }, [gameState, currentN, activeKeys]); // activeKeys dependency needed for toggle logic
+    }, [gameState, currentN, activeKeys, showStimulus]); // Added showStimulus dependency
 
     useEffect(() => {
         const handleKeyDown = (e) => {

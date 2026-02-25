@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 
-function PageRouter({ activeTab, contentCache, MarkdownRenderer, components, folderPath, STYLES, routes }) {
+function PageRouter({ activeTab, contentCache, MarkdownRenderer, components, folderPath, STYLES, routes, setCurrentPage }) {
 
     // 1. Special Component Routes (like Arena)
     // Check if the current route is defined as a component in the routes configuration
@@ -21,6 +21,7 @@ function PageRouter({ activeTab, contentCache, MarkdownRenderer, components, fol
                 components={components}
                 folderPath={folderPath}
                 gameId={gameId}
+                setCurrentPage={setCurrentPage}
             />
         );
     }
@@ -35,6 +36,7 @@ function PageRouter({ activeTab, contentCache, MarkdownRenderer, components, fol
                 STYLES={STYLES}
                 components={components}
                 folderPath={folderPath}
+                setCurrentPage={setCurrentPage}
             />
         </div>
     );

@@ -60,13 +60,17 @@ function useRouting({ sidebarTab, setSidebarTab, isMounted, dcApi }) {
                 }
 
                 // FORCE UPPERCASE STATE (Matches file system convention: LINK.md, PROTOTYPE.md)
-                const finalTab = rawPath === '' ? 'HOME' : rawPath.toUpperCase();
+                let finalTab = rawPath === '' ? 'HOME' : rawPath.toUpperCase();
+
+                // PWA Multi-Context: Check for ?game= query parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const gameParam = urlParams.get('game');
+                if (gameParam && (finalTab === 'HOME' || finalTab === 'INDEX')) {
+                    finalTab = `PLAY/${gameParam.toUpperCase()}`;
+                    console.log("[useRouting] PWA Launch detected for game:", gameParam);
+                }
 
                 console.log("[useRouting] Syncing state from URL:", finalTab, "Location:", window.location.pathname);
-                if (finalTab === 'KEYSTATIC') {
-                    console.warn("[useRouting] KEYSTATIC STATE DETECTED! Printing stack trace.");
-                    console.trace();
-                }
                 setSidebarTab(finalTab);
 
                 // DATACORE HACK: Mark initial sync as done immediately after setting state

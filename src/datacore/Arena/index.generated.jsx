@@ -5,7 +5,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 async function View({ STYLES, dc, DatacoreShim, folderPath }) {
     // Hooks provided by React import
 
-    return function Arena({ gameId = 'iqgame' }) {
+    return function Arena(props) {
+        const { gameId = 'iqgame', ...otherProps } = props;
         const [showLogic, setShowLogic] = useState(false);
 
         // Map gameId to Datacore component names
@@ -39,6 +40,7 @@ async function View({ STYLES, dc, DatacoreShim, folderPath }) {
                         name={targetComponent}
                         folderPath={folderPath}
                         isInception={true}
+                        {...otherProps}
                     />
                 </div>
 

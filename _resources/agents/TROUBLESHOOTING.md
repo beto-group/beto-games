@@ -102,14 +102,15 @@ containing block for fixed position elements.
 - Check `scripts/build-shim.js` logic for `path.relative` calculations.
 - Ensure the component in `src/datacore/` is using standard relative imports (e.g., `../utils/foo`).
 
-### 🟡 `Module not found: Can't resolve 'child_process'` (or other Node built-ins)
-**Symptoms**: Build fails during Next.js bundling with errors for `fs`, `path`, `child_process`, `os`, etc.
-**Cause**: Component dependencies (like `gitUtils.js`) use Node.js-only modules that don't exist in the browser.
-**Solution**:
-- Ensure `scripts/build-shim.js` includes the **Intelligent Stubbing** map.
-- The shim script automatically replaces `require('child_process')` with a functional mock (e.g., `{ exec: () => ({ on:
-() => {} }) }`) during transformation.
 - Run `npm run shim` to regenerate shims with stubs.
+
+### 🔴 `Module not found: Can't resolve 'fs'` (in layout.jsx)
+**Symptoms**: Deployment fails with an error stating `fs` cannot be resolved in `layout.jsx`.
+**Cause**: Next.js App Router implicitly uses the Edge runtime for certain layouts or catch-all routes. Edge does not support the Node.js `fs` module.
+**Solution**:
+1. **Move to Build-time**: Do not use `fs` at runtime in layouts.
+2. **Update Shim**: Add logic to `build-shim.js` to parse the file (e.g., `SETTINGS.md`) and generate a static `settings.generated.json`.
+3. **Static Import**: Import the JSON file directly in `layout.jsx`. This makes the data available without requiring the Node.js runtime.
 
 ### 🔴 `Parsing ecmascript source code failed / Expression expected`
 **Symptoms**: Build fails with a syntax error pointing to a Node.js stub (e.g., in `ControlPanel.generated.jsx`).
@@ -629,8 +630,10 @@ without `const`) or failed to resolve `.js` extensions to `.generated.jsx`.
             **Platform-specific issues**:
             | Platform | Issue | Fix |
             |---|---|---|
-            | Android Chrome | `beforeinstallprompt` never fires | Ensure service worker is registered and manifest is valid |
-            | iOS Safari | Event never fires (not supported) | Show manual instructions modal (Share → Add to Home Screen) |
+            | Android Chrome | `beforeinstallprompt` never fires | Ensure service worker is registered and manifest is
+            valid |
+            | iOS Safari | Event never fires (not supported) | Show manual instructions modal (Share → Add to Home
+            Screen) |
             | Desktop | Event may not fire | Expected — show default CTA text |
 
             **Debugging beforeinstallprompt on Android**:
@@ -644,7 +647,7 @@ without `const`) or failed to resolve `.js` extensions to `.generated.jsx`.
 
             // CORRECT: Check both
             const isInstalled = window.matchMedia('(display-mode: standalone)').matches
-                || window.navigator.standalone === true;  // iOS Safari specific
+            || window.navigator.standalone === true; // iOS Safari specific
             ```
 
             ---
@@ -653,13 +656,44 @@ without `const`) or failed to resolve `.js` extensions to `.generated.jsx`.
 
             ### 🟡 Game or App is Silent on Mobile Browser
             **Symptoms**: Audio works fine on desktop but is completely silent on iPhone or Android mobile browsers.
-            **Root Cause**: User Gesture Requirement. Browsers block audio playback until the user interacts with the page. If your audio logic starts after a delay (e.g., a countdown or a `setTimeout`), the "gesture context" is lost and the audio is blocked.
+            **Root Cause**: User Gesture Requirement. Browsers block audio playback until the user interacts with the
+            page. If your audio logic starts after a delay (e.g., a countdown or a `setTimeout`), the "gesture context"
+            is lost and the audio is blocked.
 
             **Solution**:
-            1. **Prime in Click Handler**: Call `window.speechSynthesis.speak(new SpeechSynthesisUtterance(''))` or play a silent buffer synchronously inside the `onClick` event of the "Start" button.
-            2. **SpeechSynthesis Specific**: Always call `window.speechSynthesis.cancel()` before starting a new session or on unmount to prevent queues from clogging.
+            1. **Prime in Click Handler**: Call `window.speechSynthesis.speak(new SpeechSynthesisUtterance(''))` or play
+            a silent buffer synchronously inside the `onClick` event of the "Start" button.
+            2. **SpeechSynthesis Specific**: Always call `window.speechSynthesis.cancel()` before starting a new session
+            or on unmount to prevent queues from clogging.
 
             **Debugging**:
             - Check if the code is actually calling the play/speak function.
             - Check the browser console for "Autoplay policy" warnings.
             - Verify the device isn't on "Silent Mode" (physical switch on iPhone).
+
+            ## 20. Intermittent UI & Logic Issues
+
+            ### 🔴 Game Match Buttons "Stick" in Active State
+            **Symptoms**: A match button (Position/Audio) stays highlighted even after the stimulus changes or the round
+            ends.
+            **Cause**: Race condition. A user clicks *exactly* as the step-timer fires, or during the 100ms transition
+            flicker. If input isn't locked during these sub-frames, the state change "borrows" the highlight into the
+            next step.
+            **Solution**:
+            1. **Flicker Lock**: In `checkMatch`, return early if `showStimulus` is `false`.
+            2. **Hard Reset**: Ensure `setActiveKeys` occurs at the VERY START of `nextStep()`.
+
+            ### 🔴 `ReferenceError: [Variable] is not defined` in Charts/Overlays
+            **Symptoms**: Stats graph fails to render or crashes the tab.
+            **Cause**: Declaration order. Logic inside a component (e.g., `chartHeight = maxN * factor`) is called
+            before `maxN` is defined.
+            **Solution**: Move all data-dependent variable definitions to the top of the component, immediately after
+            props/state destructuring.
+
+            ### 🟡 Primary "PLAY" Button is Invisible/Missing
+            **Symptoms**: The code has the button, but the screenshot shows a gap.
+            **Cause**: Visual clipping or "Ghost Rendering". Styles like `buttonPrimary` (black text on white
+            background) can sometimes fail to render correctly in certain browser/hardware-acceleration contexts, or be
+            clipped if the `padding` and `font-size` are too aggressive.
+            **Solution**: Simplify the style. Use a clean white border with a transparent or subtle background. This is
+            more resilient than heavy solid-fill backgrounds for primary actions.
