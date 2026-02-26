@@ -218,8 +218,12 @@ function WebsiteBuilder(props) {
         if (typeof document === 'undefined') return;
 
         let manifestUrl = '/manifest.json'; // Default
-        if (activeTab.startsWith('PLAY/')) {
-            const gameId = activeTab.split('/')[1]?.toLowerCase();
+        const isGameTab = activeTab.startsWith('PLAY/') || activeTab.endsWith('GAME') || activeTab === 'IQGAME';
+
+        if (isGameTab) {
+            const gameId = activeTab.startsWith('PLAY/')
+                ? activeTab.split('/')[1]?.toLowerCase()
+                : activeTab.toLowerCase().replace(/game$/, '');
             if (gameId) {
                 manifestUrl = `/api/manifest?game=${encodeURIComponent(gameId)}`;
             }
