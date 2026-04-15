@@ -14,7 +14,19 @@ const TOKENS = {
     border: 'rgba(255, 255, 255, 0.1)',
     radius: '16px',
     font: '"Outfit", sans-serif',
-    fontMono: '"JetBrains Mono", monospace'
+    fontMono: '"JetBrains Mono", monospace',
+    // 🛡️ Z-LAYER REGISTRY (High-Security Hierarchy)
+    Z: {
+        BASE: 0,
+        PARTICLES: 10,
+        VIEWPORT: 100,
+        CINEMATIC: 200,
+        MODAL_BACKDROP: 20000,
+        MODAL_CONTENT: 20002,
+        HUD_SENSOR: 59999,
+        HUD_STACK: 60000,
+        TOOLTIP: 70000
+    }
 };
 
 const GLOBAL_CSS = `
@@ -430,7 +442,7 @@ const GLOBAL_CSS = `
     white-space: nowrap;
     border: 1px solid rgba(168, 85, 247, 0.3);
     box-shadow: 0 10px 20px rgba(0,0,0,0.8);
-    z-index: 30000;
+    z-index: ${TOKENS.Z.TOOLTIP};
     letter-spacing: 1px;
     pointer-events: none;
 }

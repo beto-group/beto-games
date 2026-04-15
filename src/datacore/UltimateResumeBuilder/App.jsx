@@ -304,12 +304,6 @@ function App({ dc, modules, folderPath, onExport }) {
         }
     };
 
-    const [hoveredBtn, setHoveredBtn] = useState(null);
-    const renderTooltip = (label) => {
-        if (hoveredBtn !== label) return null;
-        return <div className="urb-tooltip-js fade-in">{label}</div>;
-    };
-
     if (!resumeData) return <div style={{ color: 'white', padding: 20 }}>Initializing Elite Resume Interface...</div>;
 
     return (
@@ -317,68 +311,40 @@ function App({ dc, modules, folderPath, onExport }) {
             <style>{GLOBAL_CSS + `
                     @media print {
                         @page { margin: 1cm; size: auto; }
-                        
-                        /* 🛰️ STANDARD RESTORATION: Hide HUD, Show Manifest */
                         .urb-hud-overlay, .urb-hover-sensor, .cinematic-immersion-stage, .urb-viewport { display: none !important; }
-                        
                         .urb-root { height: auto !important; min-height: 100vh !important; background: #050508 !important; visibility: visible !important; position: static !important; }
-                        
-                        .urb-export-modal { 
-                            position: absolute !important; inset: 0 !important; 
-                            display: flex !important; visibility: visible !important;
-                            background: #050508 !important; z-index: 99999 !important;
-                        }
-                        
+                        .urb-export-modal { position: absolute !important; inset: 0 !important; display: flex !important; visibility: visible !important; background: #050508 !important; z-index: 99999 !important; }
                         .cinematic-frame { width: 100% !important; height: auto !important; margin: 0 !important; border: none !important; box-shadow: none !important; background: #050508 !important; }
                         .urb-export-glass { background: #050508 !important; backdrop-filter: none !important; border: none !important; }
                         .urb-export-header { display: none !important; }
                         .urb-preview-container { height: auto !important; overflow: visible !important; }
                         .urb-preview-content { transform: none !important; width: 100% !important; visibility: visible !important; }
-                        
                         body, html { background: #050508 !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
                     }
             `}</style>
-            
+
             <div className="urb-hover-sensor" onMouseEnter={showHud} />
 
-            <div className="urb-viewport fade-in" 
-                style={{ 
-                    height: '100%', position: 'relative', overflow: 'hidden', background: '#050508'
-                }}
-            >
-                <div style={{ 
-                    opacity: focusedNode?.panelType === 'TIMELINE' ? 0.2 : 1, 
-                    transition: 'opacity 1s ease' 
-                }}>
+            <div className="urb-viewport fade-in" style={{ height: '100%', position: 'relative', overflow: 'hidden', background: '#050508' }}>
+                <div style={{ opacity: focusedNode?.panelType === 'TIMELINE' ? 0.2 : 1, transition: 'opacity 1s ease' }}>
                     <GeometricParticles dc={dc} modules={modules} TOKENS={TOKENS} />
                 </div>
                 
-                <div style={{ 
-                    position: 'absolute', inset: 0, zIndex: 100, pointerEvents: 'none',
-                    opacity: focusedNode?.panelType === 'TIMELINE' ? 0.15 : 1, 
-                    transition: 'opacity 1s ease' 
-                }}>
+                <div style={{ position: 'absolute', inset: 0, zIndex: TOKENS.Z.VIEWPORT, pointerEvents: 'none', opacity: focusedNode?.panelType === 'TIMELINE' ? 0.15 : 1, transition: 'opacity 1s ease' }}>
                     <NodeGraph 
-                        data={resumeData} 
-                        dc={dc} 
-                        modules={modules}
-                        focusedNode={focusedNode} 
-                        onNodeFocus={handleNodeFocus}
-                        onScrollChange={setGlobalScroll}
-                        TOKENS={TOKENS} 
+                        data={resumeData} dc={dc} modules={modules}
+                        focusedNode={focusedNode} onNodeFocus={handleNodeFocus}
+                        onScrollChange={setGlobalScroll} TOKENS={TOKENS} 
                         controlRef={nodeGraphControlRef}
                     />
                 </div>
                 
-                <div className="cinematic-immersion-stage" style={{ position: 'absolute', inset: 0, zIndex: 200, pointerEvents: 'none' }}>
+                <div className="cinematic-immersion-stage" style={{ position: 'absolute', inset: 0, zIndex: TOKENS.Z.CINEMATIC, pointerEvents: 'none' }}>
                     {modulesReady && (
                         <FloatingScene 
-                            node={focusedNode} 
-                            scroll={globalScroll}
-                            activeTab={activeTab}
-                            isAutoPlay={isAutoPlay}
-                            dc={dc} 
-                            modules={{ ...modules, ...modulesRef.current }} 
+                            node={focusedNode} scroll={globalScroll}
+                            activeTab={activeTab} isAutoPlay={isAutoPlay}
+                            dc={dc} modules={{ ...modules, ...modulesRef.current }} 
                             TOKENS={TOKENS} 
                         />
                     )}
@@ -386,20 +352,17 @@ function App({ dc, modules, folderPath, onExport }) {
             </div>
 
             {exportMode && (
-                <div className="urb-export-modal fade-in" style={{ position: 'absolute', inset: 0, zIndex: 20002, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'none' }}>
+                <div className="urb-export-modal fade-in" style={{ position: 'absolute', inset: 0, zIndex: TOKENS.Z.MODAL_BACKDROP, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'none' }}>
                     <div className="cinematic-frame fade-in" style={{ width: '90%', height: '85vh', maxWidth: '1000px', display: 'flex', flexDirection: 'column' }}>
                         <div className="urb-export-glass" style={{ 
                             position: 'relative', width: '100%', height: '100%', 
                             background: TOKENS.glassBg, borderRadius: '8px', overflow: 'hidden', 
-                            border: `1px solid ${TOKENS.border}`, 
-                            boxShadow: '0 60px 120px rgba(0,0,0,0.95)',
-                            backdropFilter: 'none',
+                            border: `1px solid ${TOKENS.border}`, boxShadow: '0 60px 120px rgba(0,0,0,0.95)',
                             display: 'flex', flexDirection: 'column'
                         }}>
                             <div className="urb-export-header" style={{ 
                                 padding: '15px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                borderBottom: `1px solid rgba(255,255,255,0.08)`,
-                                background: 'rgba(255,255,255,0.02)'
+                                borderBottom: `1px solid rgba(255,255,255,0.08)`, background: 'rgba(255,255,255,0.02)'
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f56' }} />
@@ -407,27 +370,17 @@ function App({ dc, modules, folderPath, onExport }) {
                                         MANIFEST://CLASSIFIED_DOSSIER_{resumeData?.about?.name?.toUpperCase() || 'BETO'}_2026.pdf
                                     </div>
                                 </div>
-                                    <div style={{ display: 'flex', gap: 6 }}>
-                                        <button className={`urb-act-btn ${printTheme === 'dark' ? 'active' : ''}`} onClick={() => setPrintTheme('dark')} style={{ fontSize: 7, padding: '4px 8px' }}>DARK_DOSSIER</button>
-                                        <button className={`urb-act-btn ${printTheme === 'light' ? 'active' : ''}`} onClick={() => setPrintTheme('light')} style={{ fontSize: 7, padding: '4px 8px' }}>LIGHT_MANIFEST</button>
-                                    </div>
-                                    <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 5px' }} />
-                                    <button className="urb-act-btn primary" onClick={handleExtraction}>MANIFEST_PHYSICAL</button>
-                                    <button className="urb-act-btn" onClick={() => setExportMode(false)}>CLOSE</button>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                    <button className={`urb-act-btn ${printTheme === 'dark' ? 'active' : ''}`} onClick={() => setPrintTheme('dark')} style={{ fontSize: 7, padding: '4px 8px' }}>DARK_DOSSIER</button>
+                                    <button className={`urb-act-btn ${printTheme === 'light' ? 'active' : ''}`} onClick={() => setPrintTheme('light')} style={{ fontSize: 7, padding: '4px 8px' }}>LIGHT_MANIFEST</button>
+                                </div>
+                                <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 5px' }} />
+                                <button className="urb-act-btn primary" onClick={handleExtraction}>MANIFEST_PHYSICAL</button>
+                                <button className="urb-act-btn" onClick={() => setExportMode(false)}>CLOSE</button>
                             </div>
 
-                            <div 
-                                className="urb-preview-container" 
-                                onMouseEnter={() => setIsZoomed(true)}
-                                onMouseLeave={() => setIsZoomed(false)}
-                                style={{ 
-                                    overflowY: isZoomed ? 'auto' : 'hidden',
-                                    cursor: isZoomed ? 'crosshair' : 'zoom-in'
-                                }}
-                            >
-                                <div className={`urb-preview-content ${isZoomed ? 'zoomed' : 'scaled'}`} style={{ 
-                                    transform: isZoomed ? 'scale(1)' : 'scale(0.32)' 
-                                }}>
+                            <div className="urb-preview-container" onMouseEnter={() => setIsZoomed(true)} onMouseLeave={() => setIsZoomed(false)} style={{ overflowY: isZoomed ? 'auto' : 'hidden', cursor: isZoomed ? 'crosshair' : 'zoom-in' }}>
+                                <div className={`urb-preview-content ${isZoomed ? 'zoomed' : 'scaled'}`} style={{ transform: isZoomed ? 'scale(1)' : 'scale(0.32)' }}>
                                     <div className="urb-print-area">
                                         <PrintLayout data={resumeData} TOKENS={TOKENS} dc={dc} modules={modules} />
                                     </div>
@@ -438,202 +391,21 @@ function App({ dc, modules, folderPath, onExport }) {
                 </div>
             )}
 
-            {resumeData && (
-                <>
-                    {/* 🛰️ HUD HIT-ZONE: Deep detection layer (Behind HUD to prevent click-blocking) */}
-                    <div 
-                        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 20, zIndex: 59999, pointerEvents: 'auto' }}
-                        onMouseEnter={showHud}
-                    />
-
-                    <div 
-                        id="urb-hud-stack" 
-                        onMouseEnter={showHud}
-                        onMouseLeave={() => hideHud()}
-                        style={{ 
-                            position: 'absolute', top: 0, left: 0, right: 0,
-                            zIndex: 60000, 
-                            display: 'flex', 
-                            flexDirection: 'column',
-                            padding: '24px 40px 24px 40px', 
-                            background: 'linear-gradient(to bottom, rgba(5,5,8,0.95) 0%, rgba(5,5,8,0.4) 60%, transparent 100%)',
-                            backdropFilter: 'blur(30px) saturate(180%)',
-                            borderBottom: `1px solid rgba(255,255,255,0.03)`,
-                            opacity: isHudVisible ? 1 : 0,
-                            visibility: isHudVisible ? 'visible' : 'hidden',
-                            pointerEvents: isHudVisible ? 'auto' : 'none',
-                            transform: `translateY(${isHudVisible ? '0' : '-100%'})`,
-                            transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s'
-                        }}
-                    >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'nowrap' }}>
-                        {/* 📡 STEALTH LOGO & BADGE (Left) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
-                            <div style={{ fontSize: 18, fontWeight: 950, letterSpacing: -0.5, color: 'white', fontFamily: TOKENS.font, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                                BETO<span style={{ opacity: 0.3, fontWeight: 400 }}>.PORTFOLIO</span>
-                                <span style={{ fontSize: 8, opacity: 0.5, color: TOKENS.accent, fontWeight: 900, letterSpacing: 2, marginLeft: 5 }}>FORCE_SYNC_v1.1</span>
-                            </div>
-                            
-                            <div style={{ 
-                                fontSize: 8, color: TOKENS.accent, fontWeight: 900, letterSpacing: 1.5, 
-                                border: `1px solid ${TOKENS.accent}22`, padding: '3px 8px', borderRadius: 40, 
-                                background: 'rgba(168, 85, 247, 0.05)', display: 'flex', alignItems: 'center', gap: 6
-                            }}>
-                                <div style={{ width: 4, height: 4, borderRadius: '50%', background: TOKENS.accent }} />
-                                {String(resumeData?.about?.name || 'BETO').toUpperCase()} // DOSSIER_LOGGED
-                            </div>
-                        </div>
-
-                        {/* 🕹️ COMMAND CONTROLS (Right) */}
-                        <div style={{ display: 'flex', gap: 15, alignItems: 'center', flexShrink: 0 }}>
-                            {status !== "IDLE" && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 15 }}>
-                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: TOKENS.accent, animation: 'urb-pulse-dot 1s infinite' }} />
-                                    <div style={{ fontSize: 8, color: TOKENS.accent, fontFamily: TOKENS.fontMono, opacity: 0.8 }}>
-                                        {status}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="urb-hud-strip">
-                                <button className="urb-icon-btn" onMouseEnter={() => setHoveredBtn("EXPORT_PDF")} onMouseLeave={() => setHoveredBtn(null)} onClick={() => setExportMode(true)}>
-                                    <dc.Icon icon="file-text" style={{ width: 14 }} />
-                                    {renderTooltip("EXPORT_PDF")}
-                                </button>
-                                
-                                <button 
-                                    className={`urb-icon-btn primary ${isDeploying ? 'active' : ''}`} 
-                                    onMouseEnter={() => setHoveredBtn("COMPILE_LOCAL")} onMouseLeave={() => setHoveredBtn(null)}
-                                    onClick={handleDeploy}
-                                    disabled={isDeploying || isPublishing}
-                                >
-                                    <dc.Icon icon={isDeploying ? "loader" : "zap"} style={{ width: 14 }} />
-                                    {renderTooltip("COMPILE_LOCAL")}
-                                </button>
-
-                                <button 
-                                    className={`urb-icon-btn ${isPublishing ? 'active' : ''}`} 
-                                    onMouseEnter={() => setHoveredBtn("PUB_PLUGIN")} onMouseLeave={() => setHoveredBtn(null)}
-                                    onClick={handlePublish}
-                                    disabled={isPublishing || isDeploying}
-                                >
-                                    <dc.Icon icon={isPublishing ? "loader" : "github"} style={{ width: 14 }} />
-                                    {renderTooltip("PUB_PLUGIN")}
-                                </button>
-
-                                <button 
-                                    className={`urb-icon-btn web ${isPublishing ? 'active' : ''}`} 
-                                    onMouseEnter={() => setHoveredBtn("PUB_WEB")} onMouseLeave={() => setHoveredBtn(null)}
-                                    onClick={handleWebPublish}
-                                    disabled={isPublishing || isDeploying}
-                                >
-                                    <dc.Icon icon={isPublishing ? "loader" : "globe"} style={{ width: 14 }} />
-                                    {renderTooltip("PUB_WEB")}
-                                </button>
-
-                                <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
-
-                                <button className={`urb-icon-btn ${showSettings ? 'active' : ''}`} onMouseEnter={() => setHoveredBtn("SETTINGS")} onMouseLeave={() => setHoveredBtn(null)} onClick={() => setShowSettings(!showSettings)}>
-                                    <dc.Icon icon="settings" style={{ width: 14 }} />
-                                    {renderTooltip("SETTINGS")}
-                                </button>
-
-                                <button className="urb-icon-btn danger" onMouseEnter={() => setHoveredBtn("EXIT_SYSTEM")} onMouseLeave={() => setHoveredBtn(null)} onClick={() => {
-                                        if (dc?.app?.workspace?.activeLeaf) dc.app.workspace.activeLeaf.detach();
-                                        else window.close();
-                                    }}>
-                                    <dc.Icon icon="log-out" style={{ width: 14 }} />
-                                    {renderTooltip("EXIT_SYSTEM")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ⚙️ EXPANDABLE SETTINGS INTERFACE */}
-                    <div className={`urb-settings-expanded-wrapper ${showSettings ? 'visible' : ''}`}>
-                        <div className="urb-settings-panel">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ fontSize: 10, fontWeight: 900, color: TOKENS.accent, letterSpacing: 2 }}>[ SYSTEM_CONFIGURATION ]</div>
-                                <dc.Icon 
-                                    icon="x" 
-                                    style={{ width: 14, color: TOKENS.textDim, cursor: 'pointer' }} 
-                                    onClick={() => setShowSettings(false)} 
-                                />
-                            </div>
-
-                            {/* 🔐 SECTION: GITHUB_AUTH */}
-                            <div className="urb-settings-grid">
-                                <div className="urb-setting-group">
-                                        <div className="urb-setting-label">DEPLOY_REPO_ID</div>
-                                        <input className="urb-input" value={repoName} onChange={e => updatePersistent('urb_repo_name', e.target.value, setRepoName)} />
-                                </div>
-                                <div className="urb-setting-group">
-                                        <div className="urb-setting-label">GH_AUTH_TOKEN_ACTIVE</div>
-                                        <input className="urb-input" type="password" value={ghToken} onChange={e => updateSecret('urb-github-token', e.target.value, setGhToken)} />
-                                </div>
-                            </div>
-
-                            <div className="urb-section-divider" />
-
-                            {/* 🧩 SECTION: WEB_INFRASTRUCTURE */}
-                            <div className="urb-settings-grid">
-                                <div className="urb-setting-group">
-                                    <div className="urb-setting-label">OAUTH_CLIENT_ID</div>
-                                    <input className="urb-input" value={ghClientId} onChange={e => updatePersistent('urb_gh_client_id', e.target.value, setGhClientId)} />
-                                </div>
-                                <div className="urb-setting-group">
-                                    <div className="urb-setting-label">OAUTH_CLIENT_SECRET</div>
-                                    <input className="urb-input" type="password" value={ghClientSecret} onChange={e => updateSecret('urb-gh-client-secret', e.target.value, setGhClientSecret)} />
-                                </div>
-                                <div className="urb-setting-group">
-                                    <div className="urb-setting-label">KEYSTATIC_SECRET</div>
-                                    <input className="urb-input" type="password" value={keystaticSecret} onChange={e => updateSecret('urb-keystatic-secret', e.target.value, setKeystaticSecret)} />
-                                </div>
-                                <div className="urb-setting-group">
-                                    <div className="urb-setting-label">G_APP_SLUG</div>
-                                    <input className="urb-input" value={ghAppSlug} onChange={e => updatePersistent('urb_gh_app_slug', e.target.value, setGhAppSlug)} />
-                                </div>
-                            </div>
-
-                            <div className="urb-section-divider" />
-
-                            {/* 🕹️ SECTION: ACTIONS_AND_BRIDGE */}
-                            <div style={{ display: 'flex', gap: 20 }}>
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 15 }}>
-                                    <button className="urb-act-btn" style={{ 
-                                        padding: '12px', 
-                                        background: 'rgba(16, 185, 129, 0.05)', 
-                                        border: '1px solid #10b98122',
-                                        color: '#10b981',
-                                        fontSize: 9,
-                                        fontWeight: 900,
-                                        letterSpacing: 1.5
-                                    }} onClick={() => {
-                                        const url = `https://github.com/beto-group/${repoName}`;
-                                        window.open(url, '_blank');
-                                    }}>
-                                        <dc.Icon icon="external-link" style={{ width: 10, marginRight: 8 }} />
-                                        VISIT_CLASSIFIED_REPOSITORY
-                                    </button>
-
-                                    <DeployBridge 
-                                        TOKENS={TOKENS} 
-                                        isDeploying={isDeploying}
-                                        isPublishing={isPublishing}
-                                        handleDeploy={handleDeploy}
-                                        handlePublish={handlePublish}
-                                        logs={logs}
-                                        status={status}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <MCPBridge folderPath={folderPath} dc={dc} modules={modules} onReload={() => dc.app.workspace.activeLeaf?.rebuildView?.()} />
-                </div>
-                </>
-            )}
+            <modules.HUD 
+                dc={dc} modules={modules} TOKENS={TOKENS} resumeData={resumeData}
+                status={status} showSettings={showSettings} setShowSettings={setShowSettings}
+                isHudVisible={isHudVisible} showHud={showHud} hideHud={hideHud}
+                isDeploying={isDeploying} isPublishing={isPublishing}
+                handleDeploy={handleDeploy} handlePublish={handlePublish} handleWebPublish={handleWebPublish}
+                setExportMode={setExportMode} repoName={repoName} setRepoName={setRepoName}
+                ghToken={ghToken} setGhToken={setGhToken}
+                ghClientId={ghClientId} setGhClientId={setGhClientId}
+                ghClientSecret={ghClientSecret} setGhClientSecret={setGhClientSecret}
+                keystaticSecret={keystaticSecret} setKeystaticSecret={setKeystaticSecret}
+                ghAppSlug={ghAppSlug} setGhAppSlug={setGhAppSlug}
+                updatePersistent={updatePersistent} updateSecret={updateSecret}
+                folderPath={folderPath} logs={logs}
+            />
         </div>
     );
 }

@@ -60,7 +60,7 @@ async function View({ folderPath }) {
                     const [
                         styles, parser, nodeGraph, visuals, content, floatingScene, 
                         deployment, loadScript, appModule, globeModule, hsModule, 
-                        timelineModule, adapterModule, bridgeModule
+                        timelineModule, adapterModule, bridgeModule, hudModule
                     ] = await Promise.all([
                         dc.require(`${base}/core/Styles.js`),
                         dc.require(`${base}/core/Parser.js`),
@@ -75,7 +75,8 @@ async function View({ folderPath }) {
                         dc.require(`${base}/components/HyperScroll.jsx`),
                         dc.require(`${base}/components/TimelineSlide.jsx`),
                         dc.require(`${base}/core/PlatformAdapter.jsx`),
-                        dc.require(`${base}/components/DeployBridge.jsx`)
+                        dc.require(`${base}/components/DeployBridge.jsx`),
+                        dc.require(`${base}/components/HUD.jsx`)
                     ]);
 
                     const modules = {
@@ -88,7 +89,8 @@ async function View({ folderPath }) {
                         HyperScroll: hsModule.HyperScroll,
                         TimelineSlide: timelineModule.TimelineSlide,
                         DeployBridge: bridgeModule.DeployBridge,
-                        MCPBridge: bridgeModule.MCPBridge
+                        MCPBridge: bridgeModule.MCPBridge,
+                        HUD: hudModule.HUD
                     };
 
                     setApp({ Component: appModule.App, modules });
