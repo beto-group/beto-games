@@ -146,6 +146,19 @@ export default config({
                     formatting: true,
                     dividers: true,
                     links: true,
+                    }),
+            },
+        }),
+        ultimate_resume_builder: singleton({
+            label: 'Datacore: Ultimate Resume Builder',
+            path: '_resources/data/resume',
+            format: { contentField: 'content' },
+            schema: {
+                content: fields.document({
+                    label: 'Resume Markdown Source',
+                    formatting: true,
+                    dividers: true,
+                    links: true,
                 }),
             },
         }),

@@ -6,6 +6,7 @@ const loaders = {
     'GameArcade': () => import('./GameArcade/index.generated'),
     'GlobalLeaderboard': () => import('./GlobalLeaderboard/index.generated'),
     'LiveTicker': () => import('./LiveTicker/index.generated'),
+    'UltimateResumeBuilder': () => import('./UltimateResumeBuilder/index.generated'),
     'IQGame': () => import('./games/81 IQGame/src/index.generated'),
     'EvolutionEngine': () => import('./games/EvolutionEngine/index.generated'),
     'RetroMorphGame': () => import('./games/RetroMorphGame/src/index.generated'),
